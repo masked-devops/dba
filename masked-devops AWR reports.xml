@@ -1,0 +1,324 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<displays>
+<display id="3232034d-015e-1000-8002-0b0e12972947" type="" style="Table" enable="true">
+	<name><![CDATA[masked-devops AWR reports]]></name>
+	<description><![CDATA[]]></description>
+	<tooltip><![CDATA[]]></tooltip>
+	<drillclass><![CDATA[]]></drillclass>
+	<CustomValues>
+		<TYPE><![CDATA[horizontal]]></TYPE>
+	</CustomValues>
+	<query>
+		<sql><![CDATA[-- -----------------------------------------------------------------------------
+-- Author      : Masked DevOps
+-- Date        : Jan 2012
+-- Version     : 0.1
+-- -----------------------------------------------------------------------------
+with
+	 parms as ( select
+                     nvl(:reports_dest_dir,'c:\temp')                                   reports_dest_dir
+                    ,case when instr(:reports_dest_dir,'\') > 0 then '\' else '/' end   slash
+                from dual)
+select
+	 snap_id start_snap_id
+	,to_char(end_interval_time,'yyyy-mm-dd_hh24.mi.ss')	 start_snap_date
+	,db_name
+	,instance_name
+	,dbid
+	,instance_number
+    ,reports_dest_dir
+    --,slash
+from (	select
+			 di.db_name
+			,di.instance_name
+			,s.snap_id
+			,lag(snap_id) over (partition by s.dbid,di.db_name,di.instance_number order by snap_id) as snap_id_prev
+			,s.end_interval_time
+			,di.dbid
+			,di.instance_number
+		from dba_hist_snapshot s, dba_hist_database_instance di
+		where 1=1
+			and s.dbid				  = di.dbid(+)
+			and s.instance_number	  = di.instance_number(+)
+			and s.startup_time		  = di.startup_time(+)
+	) snaps,parms
+where snap_id_prev is not null
+order by end_interval_time ,instance_number, snap_id]]></sql>
+		<binds>
+			<bind id="reports_dest_dir">
+				<prompt><![CDATA[reports_dest_dir]]></prompt>
+				<tooltip><![CDATA[reports_dest_dir]]></tooltip>
+				<value><![CDATA[c:\temp]]></value>
+				<bracket><![CDATA[null]]></bracket>
+			</bind>
+		</binds>
+	</query>
+		<pdf version="VERSION_1_7" compression="CONTENT">
+			<docproperty title="" author="" subject="" keywords="" />
+			<cell toppadding="2" bottompadding="2" leftpadding="2" rightpadding="2" horizontalalign="LEFT" verticalalign="TOP" wrap="true" />
+			<column>
+				<heading font="null" size="10" style="NORMAL" color="-16777216" rowshading="-1" labeling="FIRST_PAGE" />
+				<footing font="null" size="10" style="NORMAL" color="-16777216" rowshading="-1" labeling="NONE" />
+				<blob blob="NONE" zip="false" />
+			</column>
+			<table font="null" size="10" style="NORMAL" color="-16777216" userowshading="false" oddrowshading="-1" evenrowshading="-1" showborders="true" spacingbefore="12" spacingafter="12" horizontalalign="LEFT" />
+			<header enable="false" generatedate="false">
+				<data>
+				
+				
+				
+				
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+				null																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																		</data>
+			</header>
+			<footer enable="false" generatedate="false">
+				<data value="null" />
+			</footer>
+			<pagesetup papersize="LETTER" orientation="1" measurement="in" margintop="1.0" marginbottom="1.0" marginleft="1.0" marginright="1.0" />
+		</pdf>
+	<display id="null" type="" style="Table" enable="true">
+		<name><![CDATA[End Snap]]></name>
+		<description><![CDATA[]]></description>
+		<tooltip><![CDATA[]]></tooltip>
+		<drillclass><![CDATA[]]></drillclass>
+		<CustomValues>
+			<TYPE><![CDATA[horizontal]]></TYPE>
+		</CustomValues>
+		<query>
+			<sql><![CDATA[select
+					 s.snap_id end_snap_id
+					,to_char(s.end_interval_time,'yyyy-mm-dd_hh24.mi.ss')  end_snap_date
+					,di.db_name
+					,di.instance_name
+					,di.dbid
+					,di.instance_number
+					,:START_SNAP_ID start_snap_id
+					,:START_SNAP_DATE  start_snap_date
+					,'set echo off feedback on linesize 4000 long 100000 trimspool on pagesize 0 heading off time off timing off serveroutput on verify off termout off' ||
+						chr(10) || 'spool awr_report_'||:DB_NAME||'.'||di.instance_name||'.'||:START_SNAP_DATE||'--'||to_char(s.end_interval_time,'yyyy-mm-dd_hh24.mi.ss')||'.'||'txt;' ||
+						chr(10) || 'select output from table(dbms_workload_repository.awr_report_text('||:DBID||','||di.instance_number||','||:START_SNAP_ID||','||s.snap_id||'));' ||
+						chr(10) || 'spool off' awr_report_text
+					,'set echo off feedback on linesize 4000 long 100000 trimspool on pagesize 0 heading off time off timing off serveroutput on verify off termout off' ||
+						chr(10) || 'spool awr_report_'||:DB_NAME||'.'||di.instance_name||'.'||:START_SNAP_DATE||'--'||to_char(s.end_interval_time,'yyyy-mm-dd_hh24.mi.ss')||'.'||'html;' ||
+						chr(10) || 'select output from table(dbms_workload_repository.awr_report_html('||:DBID||','||di.instance_number||','||:START_SNAP_ID||','||s.snap_id||'));' ||
+						chr(10) || 'spool off' awr_report_html
+					,'set echo off feedback on linesize 4000 long 100000 trimspool on pagesize 0 heading off time off timing off serveroutput on verify off termout off' ||
+						chr(10) || 'spool awr_report_'||:DB_NAME||'.'||'global'||'.'||:START_SNAP_DATE||'--'||to_char(s.end_interval_time,'yyyy-mm-dd_hh24.mi.ss')||'.'||'txt;' ||
+						chr(10) || 'select output from table(dbms_workload_repository.awr_global_report_text('||:DBID||','||''''''||','||:START_SNAP_ID||','||s.snap_id||'));' ||
+						chr(10) || 'spool off' awr_global_report_text
+					,'set echo off feedback on linesize 4000 long 100000 trimspool on pagesize 0 heading off time off timing off serveroutput on verify off termout off' ||
+						chr(10) || 'spool awr_report_'||:DB_NAME||'.'||'global'||'.'||:START_SNAP_DATE||'--'||to_char(s.end_interval_time,'yyyy-mm-dd_hh24.mi.ss')||'.'||'html;' ||
+						chr(10) || 'select output from table(dbms_workload_repository.awr_global_report_html('||:DBID||','||''''''||','||:START_SNAP_ID||','||s.snap_id||'));' ||
+						chr(10) || 'spool off' awr_global_report_html
+					,'set echo off feedback on linesize 4000 long 100000 trimspool on pagesize 0 heading off time off timing off serveroutput on verify off termout off' ||
+						chr(10) || 'spool ash_report_'||:DB_NAME||'.'||di.instance_name||'.'||:START_SNAP_DATE||'--'||to_char(s.end_interval_time,'yyyy-mm-dd_hh24.mi.ss')||'.'||'txt;' ||
+						chr(10) || 'select output from table(dbms_workload_repository.ash_report_text('||:DBID||','||di.instance_number||','||'to_date('''||:START_SNAP_DATE||''',''yyyy-mm-dd hh24:mi:ss'')'||','||'to_date('''||to_char(s.end_interval_time,'yyyy-mm-dd_hh24.mi.ss')||''',''yyyy-mm-dd hh24:mi:ss'')'||'));' ||
+						chr(10) || 'spool off' ash_report_text
+					,'set echo off feedback on linesize 4000 long 100000 trimspool on pagesize 0 heading off time off timing off serveroutput on verify off termout off' ||
+						chr(10) || 'spool ash_report_'||:DB_NAME||'.'||di.instance_name||'.'||:START_SNAP_DATE||'--'||to_char(s.end_interval_time,'yyyy-mm-dd_hh24.mi.ss')||'.'||'html;' ||
+						chr(10) || 'select output from table(dbms_workload_repository.ash_report_html('||:DBID||','||di.instance_number||','||'to_date('''||:START_SNAP_DATE||''',''yyyy-mm-dd hh24:mi:ss'')'||','||'to_date('''||to_char(s.end_interval_time,'yyyy-mm-dd_hh24.mi.ss')||''',''yyyy-mm-dd hh24:mi:ss'')'||'));' ||
+						chr(10) || 'spool off' ash_report_html
+					,'set echo off feedback on linesize 4000 long 100000 trimspool on pagesize 0 heading off time off timing off serveroutput on verify off termout off' ||
+						chr(10) || 'spool ash_report_'||:DB_NAME||'.'||'global'||'.'||:START_SNAP_DATE||'--'||to_char(s.end_interval_time,'yyyy-mm-dd_hh24.mi.ss')||'.'||'txt;' ||
+						chr(10) || 'select output from table(dbms_workload_repository.ash_global_report_text('||:DBID||','||''''''||','||'to_date('''||:START_SNAP_DATE||''',''yyyy-mm-dd hh24:mi:ss'')'||','||'to_date('''||to_char(s.end_interval_time,'yyyy-mm-dd_hh24.mi.ss')||''',''yyyy-mm-dd hh24:mi:ss'')'||'));' ||
+						chr(10) || 'spool off' ash_global_report_text
+					,'set echo off feedback on linesize 4000 long 100000 trimspool on pagesize 0 heading off time off timing off serveroutput on verify off termout off' ||
+						chr(10) || 'spool ash_report_'||:DB_NAME||'.'||'global'||'.'||:START_SNAP_DATE||'--'||to_char(s.end_interval_time,'yyyy-mm-dd_hh24.mi.ss')||'.'||'html;' ||
+						chr(10) || 'select output from table(dbms_workload_repository.ash_global_report_html('||:DBID||','||''''''||','||'to_date('''||:START_SNAP_DATE||''',''yyyy-mm-dd hh24:mi:ss'')'||','||'to_date('''||to_char(s.end_interval_time,'yyyy-mm-dd_hh24.mi.ss')||''',''yyyy-mm-dd hh24:mi:ss'')'||'));' ||
+						chr(10) || 'spool off' ash_global_report_html
+				from dba_hist_snapshot s, dba_hist_database_instance di
+				where 1=1
+					and s.dbid				  = di.dbid(+)
+					and s.instance_number	  = di.instance_number(+)
+					and s.startup_time		  = di.startup_time(+)
+					and s.dbid				  = :DBID
+					and s.instance_number	  = :INSTANCE_NUMBER
+					and cast(s.end_interval_time as date) > to_date(:START_SNAP_DATE,'yyyy-mm-dd hh24:mi:ss')
+			order by end_interval_time ,instance_name, snap_id]]></sql>
+		</query>
+			<pdf version="VERSION_1_7" compression="CONTENT">
+				<docproperty title="" author="" subject="" keywords="" />
+				<cell toppadding="2" bottompadding="2" leftpadding="2" rightpadding="2" horizontalalign="LEFT" verticalalign="TOP" wrap="true" />
+				<column>
+					<heading font="null" size="10" style="NORMAL" color="-16777216" rowshading="-1" labeling="FIRST_PAGE" />
+					<footing font="null" size="10" style="NORMAL" color="-16777216" rowshading="-1" labeling="NONE" />
+					<blob blob="NONE" zip="false" />
+				</column>
+				<table font="null" size="10" style="NORMAL" color="-16777216" userowshading="false" oddrowshading="-1" evenrowshading="-1" showborders="true" spacingbefore="12" spacingafter="12" horizontalalign="LEFT" />
+				<header enable="false" generatedate="false">
+					<data>
+					
+					
+					
+					
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+						null																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																</data>
+				</header>
+				<footer enable="false" generatedate="false">
+					<data value="null" />
+				</footer>
+				<pagesetup papersize="LETTER" orientation="1" measurement="in" margintop="1.0" marginbottom="1.0" marginleft="1.0" marginright="1.0" />
+			</pdf>
+	</display>
+</display>
+</displays>
