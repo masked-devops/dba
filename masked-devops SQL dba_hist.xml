@@ -1,0 +1,2290 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<displays>
+<display id="4bbba91e-0142-1000-801a-0b81d15fed85" type="" style="Table" enable="true">
+	<name><![CDATA[masked-devops SQL dba_hist]]></name>
+	<description><![CDATA[]]></description>
+	<tooltip><![CDATA[]]></tooltip>
+	<drillclass><![CDATA[]]></drillclass>
+	<CustomValues>
+		<TYPE><![CDATA[horizontal]]></TYPE>
+	</CustomValues>
+	<query>
+		<sql><![CDATA[-- -----------------------------------------------------------------------------
+-- Author      : Masked DevOps
+-- Date        : Jan 2012
+-- Version     : 0.1
+-- -----------------------------------------------------------------------------
+select
+	 count(distinct plan_hash_value)	   over (partition by s.sql_id )					   plans_tot	-- sql_id/plans total
+	,dense_rank()	over (partition by s.sql_id order by plan_hash_value)					   plan_item	-- sql_id/plans item
+	,s.snap_id
+	,s.sql_id
+	,s.version_count
+	,s.plan_hash_value
+	,lag(s.plan_hash_value) over (partition by s.sql_id order by begin_interval_time) plan_hash_value_prev
+	,s.sql_profile
+	--,begin_interval_time
+	,to_char(begin_interval_time,'yyyy-mm-dd hh24:mi:ss day') begin_snap
+	,s.executions_delta
+	,case when executions_delta > 0 then trunc(elapsed_time_delta			/1000000/executions_delta,3)	else null end	 avg_time_sec
+	--,case when executions_delta > 0 then lag(trunc(elapsed_time_delta		/1000000/executions_delta,3))	over (partition by s.sql_id order by begin_interval_time) else null end	 avg_time_sec_prev
+	,case when executions_delta > 0 then trunc(cpu_time_delta				/1000000/executions_delta,3)	else null end	 avg_cpu
+	,case when executions_delta > 0 then trunc(iowait_delta					/1000000/executions_delta,3)	else null end	 avg_iowait
+	,case when executions_delta > 0 then trunc(apwait_delta					/1000000/executions_delta,3)	else null end	 avg_application
+	,case when executions_delta > 0 then trunc(ccwait_delta					/1000000/executions_delta,3)	else null end	 avg_concurrency
+	,case when executions_delta > 0 then trunc(clwait_delta					/1000000/executions_delta,3)	else null end	 avg_cluster
+	,case when executions_delta > 0 then trunc(plsexec_time_delta			/1000000/executions_delta,3)	else null end	 avg_plsql
+	,case when executions_delta > 0 then trunc(javexec_time_delta			/1000000/executions_delta,3)	else null end	 avg_java
+	,case when executions_delta > 0 then trunc(disk_reads_delta						/executions_delta,3)	else null end	 avg_disk_reads
+	,case when executions_delta > 0 then trunc(buffer_gets_delta					/executions_delta,3)	else null end	 avg_buffer_gets
+	,case when executions_delta > 0 then trunc(rows_processed_delta					/executions_delta,3)	else null end	 avg_rows_processed
+	,case when executions_delta > 0 then trunc(sorts_delta							/executions_delta,3)	else null end	 avg_sorts
+	,case when executions_delta > 0 then trunc(fetches_delta						/executions_delta,3)	else null end	 avg_fetches
+	,parsing_schema_name
+	,substr(sql_text,1,1000)	 sql_text
+    ,utl_raw.cast_to_varchar2(bind_data) bind_data
+	--,module
+	--,action
+	,s.dbid
+	,s.instance_number
+	,s.instance_number inst_id
+	,s.end_interval_time
+	,s.begin_interval_time
+    ,s.sql_id p_sql_id
+	from (	select s.snap_id,s.instance_number,s.sql_id,null,s.plan_hash_value,							   s.sql_profile ,begin_interval_time,end_interval_time, executions_delta,elapsed_time_delta,cpu_time_delta,iowait_delta,apwait_delta,ccwait_delta,clwait_delta,plsexec_time_delta,javexec_time_delta,disk_reads_delta,buffer_gets_delta,rows_processed_delta,s.sorts_delta,s.fetches_delta,s.parsing_schema_name,t.sql_text,s.dbid,s.version_count,s.bind_data from dba_hist_sqlstat s join dba_hist_snapshot snap on s.snap_id = snap.snap_id and s.dbid	 = snap.dbid join dba_hist_sqltext t on s.sql_id = t.sql_id and s.dbid = t.dbid
+			union all
+			select 0 snap_id,s.inst_id        ,s.sql_id,s.last_active_child_address,s.plan_hash_value,null as sql_profile,s.last_active_time ,null              ,executions,elapsed_time,cpu_time,user_io_wait_time,application_wait_time,concurrency_wait_time,cluster_wait_time,plsql_exec_time,java_exec_time,disk_reads,buffer_gets,rows_processed,sorts,fetches,null as parsing_schema_name,sql_fulltext,null,s.version_count,null from gv$sqlstats s	 --where s.last_active_time > trunc(sysdate,'HH')
+			) s
+where 1=1
+	--and executions_delta > 0
+	and s.sql_id = case when :SQL_ID is null then :DIM else :SQL_ID end
+	--and upper(to_char(s.sql_text)) like :P_SQL_TEXT
+order by s.sql_id,begin_interval_time]]></sql>
+		<binds>
+			<bind id="SQL_ID">
+				<prompt><![CDATA[SQL_ID]]></prompt>
+				<tooltip><![CDATA[SQL_ID]]></tooltip>
+				<value><![CDATA[7tsdfm7fg7ptr]]></value>
+				<bracket><![CDATA[null]]></bracket>
+			</bind>
+			<bind id="DIM">
+				<prompt><![CDATA[DIM]]></prompt>
+				<tooltip><![CDATA[DIM]]></tooltip>
+				<value><![CDATA[NULL_VALUE]]></value>
+				<bracket><![CDATA[null]]></bracket>
+			</bind>
+		</binds>
+	</query>
+		<pdf version="VERSION_1_7" compression="CONTENT">
+			<docproperty title="" author="" subject="" keywords="" />
+			<cell toppadding="2" bottompadding="2" leftpadding="2" rightpadding="2" horizontalalign="LEFT" verticalalign="TOP" wrap="true" />
+			<column>
+				<heading font="Times New Roman" size="10" style="NORMAL" color="-16777216" rowshading="-1" labeling="FIRST_PAGE" />
+				<footing font="Times New Roman" size="10" style="NORMAL" color="-16777216" rowshading="-1" labeling="NONE" />
+				<blob blob="NONE" zip="false" />
+			</column>
+			<table font="Times New Roman" size="10" style="NORMAL" color="-16777216" userowshading="false" oddrowshading="-1" evenrowshading="-1" showborders="true" spacingbefore="12" spacingafter="12" horizontalalign="LEFT" />
+			<header enable="false" generatedate="false">
+				<data>
+				
+				
+				
+				
+				
+				
+				
+				
+				
+				
+				
+				
+				
+				
+				
+				
+				
+				
+				
+				
+				
+				
+				
+				
+				
+				
+				
+				
+				
+				
+				
+				
+				
+				
+				
+				
+				
+				
+				
+				
+				
+				
+				
+				
+				
+				
+				
+				
+				
+				
+				
+				
+				
+				
+				
+				
+				
+				
+				
+				
+				
+				
+				
+				
+				
+				
+				
+				
+				
+				
+				
+				
+				
+				
+				
+				
+				
+				
+				
+				
+				
+				null																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																								</data>
+			</header>
+			<footer enable="false" generatedate="false">
+				<data value="null" />
+			</footer>
+			<pagesetup papersize="LETTER" orientation="1" measurement="in" margintop="1.0" marginbottom="1.0" marginleft="1.0" marginright="1.0" />
+		</pdf>
+	<display id="null" type="" style="Table" enable="true">
+		<name><![CDATA[sql fulltext]]></name>
+		<description><![CDATA[]]></description>
+		<tooltip><![CDATA[]]></tooltip>
+		<drillclass><![CDATA[]]></drillclass>
+		<CustomValues>
+			<TYPE><![CDATA[horizontal]]></TYPE>
+		</CustomValues>
+		<query>
+			<sql><![CDATA[select 'gv$sqlstats' dict_view, null dbid,sql_fulltext	   from gv$sqlstats where inst_id = :INSTANCE_NUMBER and sql_id = :SQL_ID and plan_hash_value = :PLAN_HASH_VALUE
+union all
+select 'dba_hist_sqltext' dict_view,dbid, sql_text	from dba_hist_sqltext where sql_id = :SQL_ID]]></sql>
+		</query>
+			<pdf version="VERSION_1_7" compression="CONTENT">
+				<docproperty title="" author="" subject="" keywords="" />
+				<cell toppadding="2" bottompadding="2" leftpadding="2" rightpadding="2" horizontalalign="LEFT" verticalalign="TOP" wrap="true" />
+				<column>
+					<heading font="null" size="10" style="NORMAL" color="-16777216" rowshading="-1" labeling="FIRST_PAGE" />
+					<footing font="null" size="10" style="NORMAL" color="-16777216" rowshading="-1" labeling="NONE" />
+					<blob blob="NONE" zip="false" />
+				</column>
+				<table font="null" size="10" style="NORMAL" color="-16777216" userowshading="false" oddrowshading="-1" evenrowshading="-1" showborders="true" spacingbefore="12" spacingafter="12" horizontalalign="LEFT" />
+				<header enable="false" generatedate="false">
+					<data>
+					
+					
+					
+					
+					
+					
+					
+					
+					
+					
+					
+					
+					
+					
+					
+					
+					
+					
+					
+					
+					
+					
+					
+					
+					
+					
+					
+					
+					
+					
+					
+					
+					
+					
+					
+					
+					
+					
+					
+					
+					
+					
+					
+					
+					
+					
+					
+					
+					
+					
+					
+					
+					
+					
+					
+					
+					
+					
+					
+					
+					
+					
+					
+					
+					
+					
+					
+					
+					
+					
+					
+					
+					
+					
+					
+					
+					
+					
+					
+					
+					
+					null																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																								</data>
+				</header>
+				<footer enable="false" generatedate="false">
+					<data value="null" />
+				</footer>
+				<pagesetup papersize="LETTER" orientation="1" measurement="in" margintop="1.0" marginbottom="1.0" marginleft="1.0" marginright="1.0" />
+			</pdf>
+	</display>
+	<display id="null" type="" style="Table" enable="true">
+		<name><![CDATA[gv$sql]]></name>
+		<description><![CDATA[]]></description>
+		<tooltip><![CDATA[]]></tooltip>
+		<drillclass><![CDATA[]]></drillclass>
+		<CustomValues>
+			<TYPE><![CDATA[horizontal]]></TYPE>
+		</CustomValues>
+		<query>
+			<sql><![CDATA[select
+	--,sql_text
+	--,sql_fulltext
+	sql_id
+	,child_number
+	,plan_hash_value
+	,sql_profile
+	,sql_plan_baseline
+	,executions
+	,to_char(last_active_time,'yyyy-mm-dd hh24:mi:ss') last_active_time
+	,first_load_time
+	,parsing_schema_name
+	,exact_matching_signature
+	,is_obsolete
+	,is_bind_sensitive
+	,is_bind_aware
+	,is_shareable
+	,program_id
+	,sharable_mem
+	,persistent_mem
+	,runtime_mem
+	,sorts
+	,loaded_versions
+	,open_versions
+	,users_opening
+	,fetches
+	,px_servers_executions
+	,end_of_fetch_count
+	,users_executing
+	,loads
+	,invalidations
+	,parse_calls
+	,disk_reads
+	,direct_writes
+	,buffer_gets
+	,application_wait_time
+	,concurrency_wait_time
+	,cluster_wait_time
+	,user_io_wait_time
+	,plsql_exec_time
+	,java_exec_time
+	,rows_processed
+	,command_type
+	,optimizer_mode
+	,optimizer_cost
+	,optimizer_env
+	,optimizer_env_hash_value
+	,parsing_user_id
+	,parsing_schema_id
+	,kept_versions
+	,address
+	,type_chk_heap
+	,hash_value
+	,old_hash_value
+	,service
+	,service_hash
+	,module
+	,module_hash
+	,action
+	,action_hash
+	,serializable_aborts
+	,outline_category
+	,cpu_time
+	,elapsed_time
+	,outline_sid
+	,child_address
+	,sqltype
+	,remote
+	,object_status
+	,literal_hash_value
+	,last_load_time
+	,child_latch
+	,sql_patch
+	,program_line#
+	,force_matching_signature
+	,bind_data
+	,typecheck_mem
+	,io_cell_offload_eligible_bytes
+	,io_interconnect_bytes
+	,physical_read_requests
+	,physical_read_bytes
+	,physical_write_requests
+	,physical_write_bytes
+	,optimized_phy_read_requests
+	,locked_total
+	,pinned_total
+	,io_cell_uncompressed_bytes
+	,io_cell_offload_returned_bytes
+from gv$sql where inst_id = :INSTANCE_NUMBER and sql_id = :SQL_ID
+order by child_number]]></sql>
+		</query>
+			<pdf version="VERSION_1_7" compression="CONTENT">
+				<docproperty title="" author="" subject="" keywords="" />
+				<cell toppadding="2" bottompadding="2" leftpadding="2" rightpadding="2" horizontalalign="LEFT" verticalalign="TOP" wrap="true" />
+				<column>
+					<heading font="null" size="10" style="NORMAL" color="-16777216" rowshading="-1" labeling="FIRST_PAGE" />
+					<footing font="null" size="10" style="NORMAL" color="-16777216" rowshading="-1" labeling="NONE" />
+					<blob blob="NONE" zip="false" />
+				</column>
+				<table font="null" size="10" style="NORMAL" color="-16777216" userowshading="false" oddrowshading="-1" evenrowshading="-1" showborders="true" spacingbefore="12" spacingafter="12" horizontalalign="LEFT" />
+				<header enable="false" generatedate="false">
+					<data>
+					
+					
+					
+					
+					
+					
+					
+					
+					
+					
+					
+					
+					
+					
+					
+					
+					
+					
+					
+					
+					
+					
+					
+					
+					
+					
+					
+					
+					
+					
+					
+					
+					
+					
+					
+					
+					
+					
+					
+					
+					
+					
+					
+					
+					
+					
+					
+					
+					
+					
+					
+					
+					
+					
+					
+					
+					
+					
+					
+					
+					
+					
+					
+					
+					
+					
+					
+					
+					
+					
+					
+					
+					
+					
+					
+					
+					
+					
+					
+					
+					
+					null																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																													</data>
+				</header>
+				<footer enable="false" generatedate="false">
+					<data value="null" />
+				</footer>
+				<pagesetup papersize="LETTER" orientation="1" measurement="in" margintop="1.0" marginbottom="1.0" marginleft="1.0" marginright="1.0" />
+			</pdf>
+	</display>
+	<display id="null" type="" style="Table" enable="true">
+		<name><![CDATA[binds]]></name>
+		<description><![CDATA[]]></description>
+		<tooltip><![CDATA[]]></tooltip>
+		<drillclass><![CDATA[]]></drillclass>
+		<CustomValues>
+			<TYPE><![CDATA[horizontal]]></TYPE>
+		</CustomValues>
+		<query>
+			<sql><![CDATA[with
+    -- sql_bind_capture as (select ' ' view_name ,name       ,to_char(position),datatype_string      ,value_string,null     from gv$sql_bind_capture bc   where bc.inst_id = :INST_ID   and bc.sql_id = :SQL_ID   and bc.child_number = :CHILD_NUMBER order by bc.position)
+    --,sql              as (select ' ' view_name ,name       ,to_char(position),datatype_string      ,value_string,null from gv$sql,table(dbms_sqltune.extract_binds(bind_data)) where inst_id = :INST_ID and sql_id = :SQL_ID and child_number = :CHILD_NUMBER)
+    --,sql_plan         as (select ' ' view_name ,bind_name  ,to_char(bind_pos),to_char(bind_type)   ,case when c.bind_type = 1 then utl_raw.cast_to_varchar2(c.bind_data) when c.bind_type = 2 then to_char(utl_raw.cast_to_number(c.bind_data)) when c.bind_type = 96 or c.bind_type = 23 then to_char(utl_raw.cast_to_varchar2(c.bind_data)) else 'Not printable try with DBMS_XPLAN.DISPLAY_CURSOR' end bind_data,null from gv$sql_plan p,xmltable ( '/*/peeked_binds/bind' passing xmltype(p.other_xml)columns bind_name varchar2(100) path '/bind/@nam',bind_pos number path '/bind/@pos',bind_type number path '/bind/@dty',bind_data raw(2000) path '/bind' ) c where 1=1 and p.other_xml is not null and p.inst_id = :INST_ID and p.sql_id = :SQL_ID and p.child_number = :CHILD_NUMBER order by c.bind_pos)
+    --,hist_sqlstat     as (select ' ' view_name ,name       ,to_char(position),datatype_string      ,value_string ,to_char(end_interval_time,'yyyy-mm-dd hh24:mi:ss') from dba_hist_sqlstat dhs natural join dba_hist_snapshot cross join table(dbms_sqltune.extract_binds(bind_data)) where 1=1 and end_interval_time > sysdate - 1 and dhs.sql_id = :SQL_ID and instance_number = :INST_ID order by end_interval_time,position)
+    hist_sqlbind     as (select ' ' view_name ,name       ,to_char(position),datatype_string      ,value_string ,to_char(end_interval_time,'yyyy-mm-dd hh24:mi:ss') from dba_hist_sqlbind dhs natural join dba_hist_snapshot where 1=1 and dhs.sql_id = :SQL_ID and instance_number = :INST_ID order by end_interval_time,position)
+--select 'GV$SQL_PLAN peeked' view_name   ,'=======' name,'=======' position,'=======' datatype,'=======' value,'=======' datetime from dual  union all
+--select * from sql_plan                  union all
+--select 'GV$SQL_BIND_CAPTURE' view_name  ,'======='  name,'=======' position,'=======' datatype,'=======' value,'=======' datetime from dual  union all
+--select * from sql_bind_capture          union all
+--select 'GV$SQL' view_name               ,'=======' name,'=======' position,'=======' datatype,'=======' value,'=======' datetime from dual  union all
+--select * from sql                       union all
+--select 'HIST_SQLSTAT' view_name         ,'======='  name,'=======' position,'=======' datatype,'=======' value,'=======' datetime from dual  union all
+--select * from hist_sqlstat              union all
+select 'HIST_SQLBIND' view_name         ,'======='  name,'=======' position,'=======' datatype,'=======' value,'=======' datetime from dual  union all
+select * from hist_sqlbind]]></sql>
+		</query>
+			<pdf version="VERSION_1_7" compression="CONTENT">
+				<docproperty title="" author="" subject="" keywords="" />
+				<cell toppadding="2" bottompadding="2" leftpadding="2" rightpadding="2" horizontalalign="LEFT" verticalalign="TOP" wrap="true" />
+				<column>
+					<heading font="Times New Roman" size="10" style="NORMAL" color="-16777216" rowshading="-1" labeling="FIRST_PAGE" />
+					<footing font="Times New Roman" size="10" style="NORMAL" color="-16777216" rowshading="-1" labeling="NONE" />
+					<blob blob="NONE" zip="false" />
+				</column>
+				<table font="Times New Roman" size="10" style="NORMAL" color="-16777216" userowshading="false" oddrowshading="-1" evenrowshading="-1" showborders="true" spacingbefore="12" spacingafter="12" horizontalalign="LEFT" />
+				<header enable="false" generatedate="false">
+					<data>
+					
+					
+					
+					
+					
+					
+					
+					
+					
+					
+					
+					
+					
+					
+					
+					
+					
+					
+					
+					
+					
+					
+					
+					
+					
+					
+					
+					
+					
+					
+					
+					
+					
+					
+					
+					
+					
+					
+					
+					
+					
+					
+					
+					
+					
+					
+					
+					
+					
+					
+					
+					
+					
+					
+					
+					
+					
+					
+					
+					
+					
+					
+					
+					
+					
+					
+					
+					
+					
+					
+					
+					
+					
+					
+					
+					
+					
+					
+					
+					
+					
+					null																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																														</data>
+				</header>
+				<footer enable="false" generatedate="false">
+					<data value="null" />
+				</footer>
+				<pagesetup papersize="LETTER" orientation="1" measurement="in" margintop="1.0" marginbottom="1.0" marginleft="1.0" marginright="1.0" />
+			</pdf>
+	</display>
+	<display id="null" type="" style="Script" enable="true">
+		<name><![CDATA[binds capture exec]]></name>
+		<description><![CDATA[]]></description>
+		<tooltip><![CDATA[]]></tooltip>
+		<drillclass><![CDATA[]]></drillclass>
+		<CustomValues>
+		</CustomValues>
+		<query>
+			<sql><![CDATA[set linesize 20000 heading off pages 0 feedback off heading off long 100000 longchunksize 1000000
+col sql_text for a10000 word_wrapped
+select 'set linesize 20000 pages 10000 long 100000' from dual;
+select 'alter session set statistics_level = all;' from dual;
+select 'alter session set current_schema = '||:PARSING_SCHEMA_NAME||';' from dual;
+select '--NLS_DATE_FORMAT='||sys_context('USERENV','NLS_DATE_FORMAT') nls_date_format from dual;
+select '--alter session set nls_date_format =''yyyy-mm-dd hh24:mi:ss'';' from dual;
+prompt
+prompt
+select '--SQL_ID bind variables' from dual;
+select 'variable '||ltrim(name,':')||' '||case when datatype_string = 'DATE' then 'VARCHAR2  ---DATE' else datatype_string end
+from  dba_hist_sqlbind hsb
+where hsb.sql_id = :SQL_ID and snap_id = :SNAP_ID
+order by position;
+prompt
+select 'exec '||name||' := '||
+case sys.anydata.gettypename(value_anydata)
+		when null				then	'null'
+		when 'SYS.BDOUBLE'		then	to_char(sys.anydata.accessbdouble(value_anydata))
+		--when 'SYS.BFILE'		  then	  sys.anydata.AccessBfile(value_anydata)
+		when 'SYS.BFLOAT'		then	to_char(sys.anydata.accessbfloat(value_anydata))
+		--when 'SYS.BLOB'		  then	  sys.anydata.AccessBlob(value_anydata)
+		when 'SYS.CHAR'			then	''''||sys.anydata.accesschar(value_anydata)||''''
+		when 'SYS.CLOB'			then	to_char(sys.anydata.accessclob(value_anydata))
+		when 'SYS.DATE'			then	 ''''||to_char(sys.anydata.accessdate(value_anydata), 'yyyy-mm-dd hh24:mi:ss')||'''' ||'		--to_date('||name||',''yyyy-mm-dd hh24:mi:ss'')'
+		--when 'SYS.INTERVALYM'	  then	  sys.anydata.AccessIntervalYM(value_anydata)
+		--when 'SYS.INTERVALDS'	  then	  sys.anydata.AccessIntervalDS(value_anydata)
+		--when 'SYS.NCHAR'		  then	  sys.anydata.AccessNchar(value_anydata)
+		--when 'SYS.NCLOB'		  then	  sys.anydata.AccessNClob(value_anydata)
+		when 'SYS.NUMBER'		then	to_char(sys.anydata.accessnumber(value_anydata))
+		--when 'SYS.NVARCHAR2'	  then	  sys.anydata.AccessNVarchar2(value_anydata)
+		--when 'SYS.RAW'		  then	  sys.anydata.AccessRaw(value_anydata)
+		when 'SYS.TIMESTAMP'	then	''''||to_char(sys.anydata.accesstimestamp(value_anydata),'yyyy-mm-dd hh24:mi:ss')||''''||'		  --to_timestamp('||name||',''yyyy-mm-dd hh24:mi:ss'')'
+		when 'SYS.TIMESTAMPLTZ' then	to_char(sys.anydata.AccessTimestampLTZ(value_anydata),'yyyy-mm-dd hh24:mi:ss')
+		when 'SYS.TIMESTAMPTZ'	then	to_char(sys.anydata.AccessTimestampTZ(value_anydata),'yyyy-mm-dd hh24:mi:ss')
+		--when 'SYS.UROWID'		  then	  sys.anydata.AccessURowid(value_anydata)
+		when 'SYS.VARCHAR'		then	''''||sys.anydata.accessvarchar(value_anydata)||''''
+		when 'SYS.VARCHAR2'		then	''''||sys.anydata.accessvarchar2(value_anydata)||''''
+		else 'null'
+	end
+from  dba_hist_sqlbind hsb
+where sql_id = :SQL_ID and snap_id = :SNAP_ID
+order by position;
+prompt
+prompt
+select sql_text||';' sql_text
+from dba_hist_sqltext t
+where t.sql_id = :SQL_ID and t.dbid = :DBID;
+prompt
+prompt
+select 'select * from table(dbms_xplan.display_cursor(null,null,''allstats last +peeked_binds +alias +bytes''));' from dual;
+select 'select * from table(dbms_xplan.display_cursor('''||:SQL_ID||''',null,''advanced''));' from dual;
+select 'select * from table(dbms_xplan.display_awr('''||:SQL_ID||''',null,null,''advanced''));' from dual;
+
+prompt
+prompt
+prompt
+prompt
+prompt
+prompt --bind_data from dba_hist_sqlstat
+--select * from table(dbms_sqltune.extract_binds(utl_raw.cast_to_raw(:BIND_DATA) ));
+select 'variable '||ltrim(name,':')||' '||case when datatype_string = 'DATE' then 'VARCHAR2  ---DATE' else datatype_string end
+from table(dbms_sqltune.extract_binds(utl_raw.cast_to_raw(:BIND_DATA)))
+order by position;
+prompt
+select 'exec '||name||' := '||
+case sys.anydata.gettypename(value_anydata)
+		when null				then	'null'
+		when 'SYS.BDOUBLE'		then	to_char(sys.anydata.accessbdouble(value_anydata))
+		--when 'SYS.BFILE'		  then	  sys.anydata.AccessBfile(value_anydata)
+		when 'SYS.BFLOAT'		then	to_char(sys.anydata.accessbfloat(value_anydata))
+		--when 'SYS.BLOB'		  then	  sys.anydata.AccessBlob(value_anydata)
+		when 'SYS.CHAR'			then	''''||sys.anydata.accesschar(value_anydata)||''''
+		when 'SYS.CLOB'			then	to_char(sys.anydata.accessclob(value_anydata))
+		when 'SYS.DATE'			then	 ''''||to_char(sys.anydata.accessdate(value_anydata), 'yyyy-mm-dd hh24:mi:ss')||'''' ||'		--to_date('||name||',''yyyy-mm-dd hh24:mi:ss'')'
+		--when 'SYS.INTERVALYM'	  then	  sys.anydata.AccessIntervalYM(value_anydata)
+		--when 'SYS.INTERVALDS'	  then	  sys.anydata.AccessIntervalDS(value_anydata)
+		--when 'SYS.NCHAR'		  then	  sys.anydata.AccessNchar(value_anydata)
+		--when 'SYS.NCLOB'		  then	  sys.anydata.AccessNClob(value_anydata)
+		when 'SYS.NUMBER'		then	to_char(sys.anydata.accessnumber(value_anydata))
+		--when 'SYS.NVARCHAR2'	  then	  sys.anydata.AccessNVarchar2(value_anydata)
+		--when 'SYS.RAW'		  then	  sys.anydata.AccessRaw(value_anydata)
+		when 'SYS.TIMESTAMP'	then	''''||to_char(sys.anydata.accesstimestamp(value_anydata),'yyyy-mm-dd hh24:mi:ss')||''''||'		  --to_timestamp('||name||',''yyyy-mm-dd hh24:mi:ss'')'
+		when 'SYS.TIMESTAMPLTZ' then	to_char(sys.anydata.AccessTimestampLTZ(value_anydata),'yyyy-mm-dd hh24:mi:ss')
+		when 'SYS.TIMESTAMPTZ'	then	to_char(sys.anydata.AccessTimestampTZ(value_anydata),'yyyy-mm-dd hh24:mi:ss')
+		--when 'SYS.UROWID'		  then	  sys.anydata.AccessURowid(value_anydata)
+		when 'SYS.VARCHAR'		then	''''||sys.anydata.accessvarchar(value_anydata)||''''
+		when 'SYS.VARCHAR2'		then	''''||sys.anydata.accessvarchar2(value_anydata)||''''
+		else 'null'
+	end
+from table(dbms_sqltune.extract_binds(utl_raw.cast_to_raw(:BIND_DATA))) hsb
+order by position;]]></sql>
+		</query>
+			<pdf version="VERSION_1_7" compression="CONTENT">
+				<docproperty title="" author="" subject="" keywords="" />
+				<cell toppadding="2" bottompadding="2" leftpadding="2" rightpadding="2" horizontalalign="LEFT" verticalalign="TOP" wrap="true" />
+				<column>
+					<heading font="Times New Roman" size="10" style="NORMAL" color="-16777216" rowshading="-1" labeling="FIRST_PAGE" />
+					<footing font="Times New Roman" size="10" style="NORMAL" color="-16777216" rowshading="-1" labeling="NONE" />
+					<blob blob="NONE" zip="false" />
+				</column>
+				<table font="Times New Roman" size="10" style="NORMAL" color="-16777216" userowshading="false" oddrowshading="-1" evenrowshading="-1" showborders="true" spacingbefore="12" spacingafter="12" horizontalalign="LEFT" />
+				<header enable="false" generatedate="false">
+					<data>
+					
+					
+					
+					
+					
+					
+					
+					
+					
+					
+					
+					
+					
+					
+					
+					
+					
+					
+					
+					
+					
+					
+					
+					
+					
+					
+					
+					
+					
+					
+					
+					
+					
+					
+					
+					
+					
+					
+					
+					
+					
+					
+					
+					
+					
+					
+					
+					
+					
+					
+					
+					
+					
+					
+					
+					
+					
+					
+					
+					
+					
+					
+					
+					
+					
+					
+					
+					
+					
+					
+					
+					
+					
+					
+					
+					
+					
+					
+					
+					
+					
+					null																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																														</data>
+				</header>
+				<footer enable="false" generatedate="false">
+					<data value="null" />
+				</footer>
+				<pagesetup papersize="LETTER" orientation="1" measurement="in" margintop="1.0" marginbottom="1.0" marginleft="1.0" marginright="1.0" />
+			</pdf>
+	</display>
+	<display id="null" type="" style="Table" enable="true">
+		<name><![CDATA[display awr]]></name>
+		<description><![CDATA[]]></description>
+		<tooltip><![CDATA[]]></tooltip>
+		<drillclass><![CDATA[]]></drillclass>
+		<CustomValues>
+			<TYPE><![CDATA[horizontal]]></TYPE>
+		</CustomValues>
+		<query>
+			<sql><![CDATA[select * from table(dbms_xplan.display_awr( :SQL_ID,:PLAN_HASH_VALUE,:DBID,'advanced'))]]></sql>
+		</query>
+			<pdf version="VERSION_1_7" compression="CONTENT">
+				<docproperty title="" author="" subject="" keywords="" />
+				<cell toppadding="2" bottompadding="2" leftpadding="2" rightpadding="2" horizontalalign="LEFT" verticalalign="TOP" wrap="true" />
+				<column>
+					<heading font="Times New Roman" size="10" style="NORMAL" color="-16777216" rowshading="-1" labeling="FIRST_PAGE" />
+					<footing font="Times New Roman" size="10" style="NORMAL" color="-16777216" rowshading="-1" labeling="NONE" />
+					<blob blob="NONE" zip="false" />
+				</column>
+				<table font="Times New Roman" size="10" style="NORMAL" color="-16777216" userowshading="false" oddrowshading="-1" evenrowshading="-1" showborders="true" spacingbefore="12" spacingafter="12" horizontalalign="LEFT" />
+				<header enable="false" generatedate="false">
+					<data>
+					
+					
+					
+					
+					
+					
+					
+					
+					
+					
+					
+					
+					
+					
+					
+					
+					
+					
+					
+					
+					
+					
+					
+					
+					
+					
+					
+					
+					
+					
+					
+					
+					
+					
+					
+					
+					
+					
+					
+					
+					
+					
+					
+					
+					
+					
+					
+					
+					
+					
+					
+					
+					
+					
+					
+					
+					
+					
+					
+					
+					
+					
+					
+					
+					
+					
+					
+					
+					
+					
+					
+					
+					
+					
+					
+					
+					
+					
+					
+					
+					
+					null																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																														</data>
+				</header>
+				<footer enable="false" generatedate="false">
+					<data value="null" />
+				</footer>
+				<pagesetup papersize="LETTER" orientation="1" measurement="in" margintop="1.0" marginbottom="1.0" marginleft="1.0" marginright="1.0" />
+			</pdf>
+	</display>
+	<display id="null" type="" style="Table" enable="true">
+		<name><![CDATA[display cursor]]></name>
+		<description><![CDATA[]]></description>
+		<tooltip><![CDATA[]]></tooltip>
+		<drillclass><![CDATA[]]></drillclass>
+		<CustomValues>
+			<TYPE><![CDATA[horizontal]]></TYPE>
+		</CustomValues>
+		<query>
+			<sql><![CDATA[select * from table(dbms_xplan.display_cursor( :SQL_ID,:CHILD_NUMBER,'advanced'))]]></sql>
+		</query>
+			<pdf version="VERSION_1_7" compression="CONTENT">
+				<docproperty title="" author="" subject="" keywords="" />
+				<cell toppadding="2" bottompadding="2" leftpadding="2" rightpadding="2" horizontalalign="LEFT" verticalalign="TOP" wrap="true" />
+				<column>
+					<heading font="null" size="10" style="NORMAL" color="-16777216" rowshading="-1" labeling="FIRST_PAGE" />
+					<footing font="null" size="10" style="NORMAL" color="-16777216" rowshading="-1" labeling="NONE" />
+					<blob blob="NONE" zip="false" />
+				</column>
+				<table font="null" size="10" style="NORMAL" color="-16777216" userowshading="false" oddrowshading="-1" evenrowshading="-1" showborders="true" spacingbefore="12" spacingafter="12" horizontalalign="LEFT" />
+				<header enable="false" generatedate="false">
+					<data>
+					
+					
+					
+					
+					
+					
+					
+					
+					
+					
+					
+					
+					
+					
+					
+					
+					
+					
+					
+					
+					
+					
+					
+					
+					
+					
+					
+					
+					
+					
+					
+					
+					
+					
+					
+					
+					
+					
+					
+					
+					
+					
+					
+					
+					
+					
+					
+					
+					
+					
+					
+					
+					
+					
+					
+					
+					
+					
+					
+					
+					
+					
+					
+					
+					
+					
+					
+					
+					
+					
+					
+					
+					
+					
+					
+					
+					
+					
+					
+					
+					
+					null																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																									</data>
+				</header>
+				<footer enable="false" generatedate="false">
+					<data value="null" />
+				</footer>
+				<pagesetup papersize="LETTER" orientation="1" measurement="in" margintop="1.0" marginbottom="1.0" marginleft="1.0" marginright="1.0" />
+			</pdf>
+	</display>
+	<display id="null" type="" style="Script" enable="true">
+		<name><![CDATA[load sql_plan_baseline]]></name>
+		<description><![CDATA[]]></description>
+		<tooltip><![CDATA[]]></tooltip>
+		<drillclass><![CDATA[]]></drillclass>
+		<CustomValues>
+		</CustomValues>
+		<query>
+			<sql><![CDATA[set linesize 20000 heading off pages 0 feedback off heading off long 100000 longchunksize 1000000
+col sql_text for a10000 word_wrapped
+select '--!!!Create baseline first to have the steps to modify/export.!!!'||chr(10)||chr(10) from dual;
+
+
+select
+	'set serveroutput on;'||chr(10)||
+	'exec dbms_sqltune.drop_sqlset(sqlset_name=>'''||:SNAP_ID||'.'||:SQL_ID||'.'||:PLAN_HASH_VALUE||''');'||chr(10)||
+	'exec dbms_sqltune.create_sqlset(sqlset_name => '''||:SNAP_ID||'.'||:SQL_ID||'.'||:PLAN_HASH_VALUE||''', description => '':SNAP_ID='||:SNAP_ID||',:SQL_ID='||:SQL_ID||',:PLAN_HASH_VALUE='||:PLAN_HASH_VALUE||''');'||chr(10)||
+	'declare'||chr(10)||
+	chr(9)||'cur       sys_refcursor;'||chr(10)||
+	chr(9)||'l_plan    pls_integer;'||chr(10)||
+	'begin	'||chr(10)||
+	chr(9)||'open cur for select value(p) from table(dbms_sqltune.select_workload_repository(begin_snap=> '||to_char(:SNAP_ID-1)||',end_snap => '||:SNAP_ID||',basic_filter=>''sql_id = '''''||:SQL_ID||''''' or plan_hash_value = '''''||:PLAN_HASH_VALUE||''''''',attribute_list=>''ALL'') ) p;'||chr(10)||
+	chr(9)||'dbms_sqltune.load_sqlset( sqlset_name=> '''||:SNAP_ID||'.'||:SQL_ID||'.'||:PLAN_HASH_VALUE||''', populate_cursor=>cur); close cur;'||chr(10)||
+	chr(9)||'execute immediate ''alter session set tracefile_identifier=load_plans_from_sqlset'';'||chr(10)||
+	chr(9)||'dbms_spm.configure(''spm_tracing'',1); -- trace on'||chr(10)||
+    chr(9)||'l_plan := dbms_spm.load_plans_from_sqlset(sqlset_name => '''||:SNAP_ID||'.'||:SQL_ID||'.'||:PLAN_HASH_VALUE||''',basic_filter=>''plan_hash_value = '''''||:PLAN_HASH_VALUE||''''''');'||chr(10)||
+	chr(9)||'dbms_spm.configure(''spm_tracing'',0); -- trace off'||chr(10)||
+	chr(9)||'dbms_output.put_line(''Plans Loaded: '' || l_plan);'||chr(10)||
+	'end;'||chr(10)||
+	'/'||chr(10)
+    sql_text
+from dual;
+
+select 'select * from table(dbms_sqltune.select_sqlset('''||:SNAP_ID||'.'||:SQL_ID||'.'||:PLAN_HASH_VALUE||'''));'||chr(10) sql_text from dual; 
+select 'select * from   dba_sql_plan_baselines;'||chr(10) sql_text from dual;
+
+select
+    '-- If replace with a hinted plan run:'||chr(10)||
+    'select sql_handle,plan_name,origin,enabled,accepted,fixed from dba_sql_plan_baselines where signature in (select dbms_sqltune.sqltext_to_signature(sql_text) from dba_hist_sqltext where sql_id='''||:SQL_ID||''');'||chr(10)||
+    'variable l_rc number'||chr(10)||
+    'exec :l_rc := dbms_spm.load_plans_from_cursor_cache(sql_id => ''xxxxx'',plan_hash_value => ''000000'',sql_handle => '''||sql_handle||''',fixed => ''YES'' );'||chr(10)||
+    'print :l_rc'||chr(10)||
+    'select sql_handle,plan_name,origin,enabled,accepted,fixed from dba_sql_plan_baselines where signature in (select dbms_sqltune.sqltext_to_signature(sql_text) from dba_hist_sqltext where sql_id='''||:SQL_ID||''');'||chr(10)||
+    'exec :l_rc := dbms_spm.drop_sql_plan_baseline (sql_handle => '''||sql_handle||''',plan_name  => '''||plan_name||''');'||chr(10)||
+    'print :l_rc'||chr(10)||
+    'select sql_handle,plan_name,origin,enabled,accepted,fixed from dba_sql_plan_baselines where signature in (select dbms_sqltune.sqltext_to_signature(sql_text) from dba_hist_sqltext where sql_id='''||:SQL_ID||''');'||chr(10)||
+    chr(10)
+from dba_sql_plan_baselines, (select :SQL_ID sql_id from dual) sql
+where 1=1 
+and (  signature in (select dbms_sqltune.sqltext_to_signature(sql_text) from dba_hist_sqltext where sql_id=sql.sql_id)
+    or signature in (select exact_matching_signature from gv$sql where sql_id=sql.sql_id)
+    or signature in (select exact_matching_signature from gv$sqlstats where sql_id=sql.sql_id)
+    or signature in (select exact_matching_signature from gv$sql_monitor where sql_id=sql.sql_id)
+    );
+    
+    
+select
+    '-- If export baseline run:'||chr(10)||
+    '--SOURCE'||chr(10)||
+    'exec dbms_spm.create_stgtab_baseline(''STGTAB'', ''SYSTEM'');'||chr(10)||
+    'variable l_rc number'||chr(10)||
+    'exec :l_rc := dbms_spm.pack_stgtab_baseline(''STGTAB'', ''SYSTEM'', sql_handle => '''||sql_handle||''', plan_name => '''||plan_name||''' );'||chr(10)||
+    'print :l_rc'||chr(10)||
+    'create or replace directory DPDIR as ''/oraback/Adhoc/exports'';'||chr(10)||
+    'expdp \''/ as sysdba\'' TABLES=system.stgtab  dumpfile=${ORACLE_SID}.stgtab.$(date ''+%Y-%m-%d_%H%M%S'').dmp  logfile=${ORACLE_SID}.stgtab.$(date ''+%Y-%m-%d_%H%M%S'').log directory=dpdir'||chr(10)||
+    'scp /oraback/Adhoc/exports/NWMU.stgtab.2016-06-13_113507.dmp  v06summ5t:/oraback/Adhoc/exports'||chr(10)||
+    'drop table system.stgtab;'||chr(10)||
+    '--TARGET'||chr(10)||
+    'create or replace directory DPDIR as ''/oraback/Adhoc/exports'';'||chr(10)||
+    'impdp \''/ as sysdba\'' TABLES=system.stgtab  dumpfile=ORCL.stgtab.YYYY-MM-DD_HH24MISS.dmp  logfile=${ORACLE_SID}.stgtab.import.$(date ''+%Y-%m-%d_%H%M%S'').log directory=dpdir'||chr(10)||
+    'var x number;'||chr(10)||
+    'exec :x := dbms_spm.unpack_stgtab_baseline(''STGTAB'', ''SYSTEM'');'||chr(10)||
+    chr(10)
+from dba_sql_plan_baselines, (select :SQL_ID sql_id from dual) sql
+where 1=1 
+and (  signature in (select dbms_sqltune.sqltext_to_signature(sql_text) from dba_hist_sqltext where sql_id=sql.sql_id)
+    or signature in (select exact_matching_signature from gv$sql where sql_id=sql.sql_id)
+    or signature in (select exact_matching_signature from gv$sqlstats where sql_id=sql.sql_id)
+    or signature in (select exact_matching_signature from gv$sql_monitor where sql_id=sql.sql_id)
+    );]]></sql>
+		</query>
+			<pdf version="VERSION_1_7" compression="CONTENT">
+				<docproperty title="" author="" subject="" keywords="" />
+				<cell toppadding="2" bottompadding="2" leftpadding="2" rightpadding="2" horizontalalign="LEFT" verticalalign="TOP" wrap="true" />
+				<column>
+					<heading font="null" size="10" style="NORMAL" color="-16777216" rowshading="-1" labeling="FIRST_PAGE" />
+					<footing font="null" size="10" style="NORMAL" color="-16777216" rowshading="-1" labeling="NONE" />
+					<blob blob="NONE" zip="false" />
+				</column>
+				<table font="null" size="10" style="NORMAL" color="-16777216" userowshading="false" oddrowshading="-1" evenrowshading="-1" showborders="true" spacingbefore="12" spacingafter="12" horizontalalign="LEFT" />
+				<header enable="false" generatedate="false">
+					<data>
+					
+					
+					
+					
+					
+					
+					
+					
+					
+					
+					
+					
+					
+					
+					
+					
+					
+					
+					
+					
+					
+					
+					
+					
+					
+					
+					
+					
+					
+					
+					
+					
+					
+					
+					
+					
+					
+					
+					
+					
+					
+					
+					
+					
+					
+					
+					
+					
+					
+					
+					
+					
+					
+					
+					
+					
+					
+					
+					
+					
+					
+					
+					
+					
+					
+					
+					
+					
+					
+					
+					
+					
+					
+					
+					
+					
+					
+					
+					
+					
+					
+					null																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																									</data>
+				</header>
+				<footer enable="false" generatedate="false">
+					<data value="null" />
+				</footer>
+				<pagesetup papersize="LETTER" orientation="1" measurement="in" margintop="1.0" marginbottom="1.0" marginleft="1.0" marginright="1.0" />
+			</pdf>
+	</display>
+	<display id="null" type="" style="Table" enable="true">
+		<name><![CDATA[sql_profile hint]]></name>
+		<description><![CDATA[]]></description>
+		<tooltip><![CDATA[]]></tooltip>
+		<drillclass><![CDATA[]]></drillclass>
+		<CustomValues>
+			<TYPE><![CDATA[horizontal]]></TYPE>
+		</CustomValues>
+		<query>
+			<sql><![CDATA[select hint
+from (select p.name, p.signature, p.category,
+			 row_number() over (partition by sd.signature, sd.category order by sd.signature) row_num,
+			 extractValue(value(t), '/hint') hint
+	  from sys.sqlobj$data sd, dba_sql_profiles p, table(xmlsequence(extract(xmltype(sd.comp_data),'/outline_data/hint'))) t
+	  where sd.obj_type = 1
+	  and p.signature = sd.signature
+	  and p.name like nvl(:SQL_PROFILE,name)
+)]]></sql>
+		</query>
+			<pdf version="VERSION_1_7" compression="CONTENT">
+				<docproperty title="" author="" subject="" keywords="" />
+				<cell toppadding="2" bottompadding="2" leftpadding="2" rightpadding="2" horizontalalign="LEFT" verticalalign="TOP" wrap="true" />
+				<column>
+					<heading font="null" size="10" style="NORMAL" color="-16777216" rowshading="-1" labeling="FIRST_PAGE" />
+					<footing font="null" size="10" style="NORMAL" color="-16777216" rowshading="-1" labeling="NONE" />
+					<blob blob="NONE" zip="false" />
+				</column>
+				<table font="null" size="10" style="NORMAL" color="-16777216" userowshading="false" oddrowshading="-1" evenrowshading="-1" showborders="true" spacingbefore="12" spacingafter="12" horizontalalign="LEFT" />
+				<header enable="false" generatedate="false">
+					<data>
+					
+					
+					
+					
+					
+					
+					
+					
+					
+					
+					
+					
+					
+					
+					
+					
+					
+					
+					
+					
+					
+					
+					
+					
+					
+					
+					
+					
+					
+					
+					
+					
+					
+					
+					
+					
+					
+					
+					
+					
+					
+					
+					
+					
+					
+					
+					
+					
+					
+					
+					
+					
+					
+					
+					
+					
+					
+					
+					
+					
+					
+					
+					
+					
+					
+					
+					
+					
+					
+					
+					
+					
+					
+					
+					
+					
+					
+					
+					
+					
+					
+					null																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																													</data>
+				</header>
+				<footer enable="false" generatedate="false">
+					<data value="null" />
+				</footer>
+				<pagesetup papersize="LETTER" orientation="1" measurement="in" margintop="1.0" marginbottom="1.0" marginleft="1.0" marginright="1.0" />
+			</pdf>
+	</display>
+	<display id="null" type="" style="Table" enable="true">
+		<name><![CDATA[load sql_profile]]></name>
+		<description><![CDATA[]]></description>
+		<tooltip><![CDATA[]]></tooltip>
+		<drillclass><![CDATA[]]></drillclass>
+		<CustomValues>
+			<TYPE><![CDATA[horizontal]]></TYPE>
+		</CustomValues>
+		<query>
+			<sql><![CDATA[select																									chr(10)||
+'--ORA-13786 -> run as sysdba'||chr(10)||
+'set serveroutput on echo on'||chr(10)||
+'variable tuning_task varchar2(100)																 '||chr(10)||
+'variable sql_id	  varchar2(100)																 '||chr(10)||
+'variable profile	  varchar2(100)																 '||chr(10)||
+'exec :tuning_task := ''tuning_task_'||:SQL_ID||''';											 '||chr(10)||
+'exec :profile	   := ''profile_'||:SQL_ID||''';												 '||chr(10)||
+'exec :SQL_ID	   := '''||:SQL_ID||''';														 '||chr(10)||
+'-- drop tuning task'||chr(10)||
+'exec begin dbms_sqltune.drop_tuning_task(task_name => :tuning_task); exception when others then null; end;'||chr(10)||
+'-- drop sql profile'||chr(10)||
+'--exec dbms_sqltune.drop_sql_profile (name => :profile, ignore => true);						 '||chr(10)||
+'-- create tuning task																			 '||chr(10)||
+'begin																							 '||chr(10)||
+'  :tuning_task := dbms_sqltune.create_tuning_task (											 '||chr(10)||
+case when :SNAP_ID > 0 then '						   begin_snap  => '||(:SNAP_ID -1)||', end_snap => '||:SNAP_ID||','||chr(10) else null end ||
+'						   sql_id	   => :sql_id,												 '||chr(10)||
+'						   scope	   => dbms_sqltune.scope_comprehensive,						 '||chr(10)||
+'						   time_limit  => 60,													 '||chr(10)||
+'						   task_name   => :tuning_task,											 '||chr(10)||
+'						   description => ''Tuning task for statement ''||:SQL_ID||''.'');		 '||chr(10)||
+'  dbms_output.put_line(''sql_tune_task_id: '' || :tuning_task);								 '||chr(10)||
+'  dbms_sqltune.execute_tuning_task(:tuning_task);												 '||chr(10)||
+'  dbms_output.put_line(:tuning_task);															 '||chr(10)||
+'end;																							 '||chr(10)||
+'/																								 '||chr(10)||
+'set long 80000 pages 1000 line 200																 '||chr(10)||
+'col report format a130																			 '||chr(10)||
+'select dbms_sqltune.report_tuning_task(:tuning_task) report from dual;									'||chr(10)||
+'select rat.attr1 from sys.wri$_adv_tasks tsk, sys.wri$_adv_rationale rat where tsk.name = :tuning_task and rat.task_id = tsk.id ;'||chr(10)||
+'begin																							 '||chr(10)||
+'	 dbms_sqltune.accept_sql_profile( task_name => :tuning_task,								 '||chr(10)||
+'									 task_owner =>	sys_context(''USERENV'', ''SESSION_USER''),	 '||chr(10)||
+'									 name => :profile,											 '||chr(10)||
+'									 description => ''profile for '||:SQL_ID||''',				 '||chr(10)||
+'									 --category => ''TEST'',									 '||chr(10)||
+'									 replace => TRUE,											 '||chr(10)||
+'									 force_match => TRUE,										 '||chr(10)||
+'									 profile_type => DBMS_SQLTUNE.PX_PROFILE					 '||chr(10)||
+'	 );																							 '||chr(10)||
+'end;																							 '||chr(10)||
+'/																								 '||chr(10)||
+'col created for a30																			 '||chr(10)||
+'select name,status,created from dba_sql_profiles where name = :profile;						 '||chr(10)||
+																									chr(10)	  load_profile
+from dual]]></sql>
+		</query>
+			<pdf version="VERSION_1_7" compression="CONTENT">
+				<docproperty title="" author="" subject="" keywords="" />
+				<cell toppadding="2" bottompadding="2" leftpadding="2" rightpadding="2" horizontalalign="LEFT" verticalalign="TOP" wrap="true" />
+				<column>
+					<heading font="null" size="10" style="NORMAL" color="-16777216" rowshading="-1" labeling="FIRST_PAGE" />
+					<footing font="null" size="10" style="NORMAL" color="-16777216" rowshading="-1" labeling="NONE" />
+					<blob blob="NONE" zip="false" />
+				</column>
+				<table font="null" size="10" style="NORMAL" color="-16777216" userowshading="false" oddrowshading="-1" evenrowshading="-1" showborders="true" spacingbefore="12" spacingafter="12" horizontalalign="LEFT" />
+				<header enable="false" generatedate="false">
+					<data>
+					
+					
+					
+					
+					
+					
+					
+					
+					
+					
+					
+					
+					
+					
+					
+					
+					
+					
+					
+					
+					
+					
+					
+					
+					
+					
+					
+					
+					
+					
+					
+					
+					
+					
+					
+					
+					
+					
+					
+					
+					
+					
+					
+					
+					
+					
+					
+					
+					
+					
+					
+					
+					
+					
+					
+					
+					
+					
+					
+					
+					
+					
+					
+					
+					
+					
+					
+					
+					
+					
+					
+					
+					
+					
+					
+					
+					
+					
+					
+					
+					
+					null																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																									</data>
+				</header>
+				<footer enable="false" generatedate="false">
+					<data value="null" />
+				</footer>
+				<pagesetup papersize="LETTER" orientation="1" measurement="in" margintop="1.0" marginbottom="1.0" marginleft="1.0" marginright="1.0" />
+			</pdf>
+	</display>
+	<display id="null" type="" style="Table" enable="true">
+		<name><![CDATA[stats]]></name>
+		<description><![CDATA[]]></description>
+		<tooltip><![CDATA[]]></tooltip>
+		<drillclass><![CDATA[]]></drillclass>
+		<CustomValues>
+			<TYPE><![CDATA[horizontal]]></TYPE>
+		</CustomValues>
+		<query>
+			<sql><![CDATA[with hsp as (	  select /*+ no_merge */ distinct object_owner,object_name,object#
+				from  dba_hist_sql_plan
+				where dbid = :DBID and sql_id = :SQL_ID and plan_hash_value = :PLAN_HASH_VALUE and object# is not null),
+	parms as (select :P_INST_ID instance_number,:P_SQL_ID sql_id from dual)
+select distinct
+	 object_owner
+	,'SQLDEV:LINK:'||object_owner||':'||object_type||':'||object_name||':oracle.dbtools.raptor.controls.grid.DefaultDrillLink' object_name
+	,object_id
+	,object_type
+	,subobject_name
+	,case
+		when object_type = 'TABLE'				   then (select to_char(last_analyzed,'yyyy-mm-dd hh24:mi:ss') from dba_tables where owner = object_owner and table_name = object_name)
+		when object_type = 'TABLE PARTITION'	   then (select to_char(last_analyzed,'yyyy-mm-dd hh24:mi:ss') from dba_tab_partitions where table_owner = object_owner and		partition_name = object_name)
+		when object_type = 'TABLE SUBPARTITION'	   then (select to_char(last_analyzed,'yyyy-mm-dd hh24:mi:ss') from dba_tab_subpartitions where table_owner = object_owner and	subpartition_name = object_name)
+		when object_type = 'INDEX'				   then (select to_char(last_analyzed,'yyyy-mm-dd hh24:mi:ss') from dba_indexes where owner = object_owner and index_name = object_name)
+		when object_type = 'INDEX PARTITION'	   then (select to_char(last_analyzed,'yyyy-mm-dd hh24:mi:ss') from dba_ind_partitions where index_owner = object_owner and		partition_name = object_name)
+		when object_type = 'INDEX SUBPARTITION'	   then (select to_char(last_analyzed,'yyyy-mm-dd hh24:mi:ss') from dba_ind_subpartitions where index_owner = object_owner and	subpartition_name = object_name)
+	else null end last_analyzed
+	,case
+		when object_type = 'TABLE'				   then (select num_rows from dba_tables where owner = object_owner and table_name = object_name)
+		when object_type = 'TABLE PARTITION'	   then (select num_rows from dba_tab_partitions where table_owner = object_owner and	  partition_name = object_name)
+		when object_type = 'TABLE SUBPARTITION'	   then (select num_rows from dba_tab_subpartitions where table_owner = object_owner and  subpartition_name = object_name)
+		when object_type = 'INDEX'				   then (select num_rows from dba_indexes where owner = object_owner and index_name = object_name)
+		when object_type = 'INDEX PARTITION'	   then (select num_rows from dba_ind_partitions where index_owner = object_owner and	  partition_name = object_name)
+		when object_type = 'INDEX SUBPARTITION'	   then (select num_rows from dba_ind_subpartitions where index_owner = object_owner and  subpartition_name = object_name)
+	else null end num_rows
+	,case
+		when object_type = 'INDEX'				   then (select distinct_keys from dba_indexes where owner = object_owner and index_name = object_name)
+		when object_type = 'INDEX PARTITION'	   then (select distinct_keys from dba_ind_partitions where index_owner = object_owner and	   partition_name = object_name)
+		when object_type = 'INDEX SUBPARTITION'	   then (select distinct_keys from dba_ind_subpartitions where index_owner = object_owner and  subpartition_name = object_name)
+	else null end distinct_keys
+	,case
+		when object_type = 'TABLE'				   then (select stale_stats from dba_tab_statistics where owner = object_owner and table_name = object_name and partition_name is null		 and subpartition_name is null)
+		when object_type = 'TABLE PARTITION'	   then (select stale_stats from dba_tab_statistics where owner = object_owner and								partition_name = object_name and subpartition_name is null)
+		when object_type = 'TABLE SUBPARTITION'	   then (select stale_stats from dba_tab_statistics where owner = object_owner and																 subpartition_name = object_name)
+		when object_type = 'INDEX'				   then (select stale_stats from dba_ind_statistics where owner = object_owner and index_name = object_name and partition_name is null		 and subpartition_name is null)
+		when object_type = 'INDEX PARTITION'	   then (select stale_stats from dba_ind_statistics where owner = object_owner and								partition_name = object_name and subpartition_name is null)
+		when object_type = 'INDEX SUBPARTITION'	   then (select stale_stats from dba_ind_statistics where owner = object_owner and																 subpartition_name = object_name)
+	else null end stale_stats
+	,case
+		when object_type = 'TABLE'				   then 'select * from sys.wri$_optstat_tab_history where obj# = '||object_id||' order by savtime;'
+		when object_type = 'TABLE PARTITION'	   then 'select * from sys.wri$_optstat_tab_history where obj# = '||object_id||' order by savtime;'
+		when object_type = 'TABLE SUBPARTITION'	   then 'select * from sys.wri$_optstat_tab_history where obj# = '||object_id||' order by savtime;'
+		when object_type = 'INDEX'				   then 'select * from sys.wri$_optstat_ind_history where obj# = '||object_id||' order by savtime;'
+		when object_type = 'INDEX PARTITION'	   then 'select * from sys.wri$_optstat_ind_history where obj# = '||object_id||' order by savtime;'
+		when object_type = 'INDEX SUBPARTITION'	   then 'select * from sys.wri$_optstat_ind_history where obj# = '||object_id||' order by savtime;'
+	else null end history
+	,case
+		when object_type = 'TABLE'				   then 'exec dbms_stats.gather_table_stats(ownname => '''||object_owner||''',tabname => '''|| object_name||''');'
+		when object_type = 'TABLE PARTITION'	   then 'exec dbms_stats.gather_table_stats(ownname => '''||object_owner||''',tabname => '''|| parent_name||''',granularity => ''PARTITION'',	 partname => '''||object_name||''');'
+		when object_type = 'TABLE SUBPARTITION'	   then 'exec dbms_stats.gather_table_stats(ownname => '''||object_owner||''',tabname => '''|| parent_name||''',granularity => ''SUBPARTITION'', partname => '''||object_name||''');'
+		when object_type = 'INDEX'				   then 'exec dbms_stats.gather_index_stats(ownname => '''||object_owner||''',indname => '''|| object_name||''');'
+		when object_type = 'INDEX PARTITION'	   then 'exec dbms_stats.gather_index_stats(ownname => '''||object_owner||''',indname => '''|| parent_name||''',granularity => ''PARTITION'',	 partname => '''||object_name||''');'
+		when object_type = 'INDEX SUBPARTITION'	   then 'exec dbms_stats.gather_index_stats(ownname => '''||object_owner||''',indname => '''|| parent_name||''',granularity => ''SUBPARTITION'', partname => '''||object_name||''');'
+	else null end gather
+from (
+		select
+		 o.owner	object_owner
+		,o.object_name
+		,o.object_type
+		,o.subobject_name
+		,o.object_id
+		,case
+			when o.object_type = 'TABLE'				 then null
+			when o.object_type = 'TABLE PARTITION'		 then (select table_owner||'.'||table_name||'(table)' from dba_tab_partitions	 where table_owner = hsp.object_owner and partition_name = hsp.object_name)
+			when o.object_type = 'TABLE SUBPARTITION'	 then (select table_owner||'.'||table_name||'(table)' from dba_tab_subpartitions where table_owner = hsp.object_owner and subpartition_name = hsp.object_name)
+			when o.object_type = 'INDEX'				 then (select table_owner||'.'||table_name||'(table)' from dba_indexes			 where		 owner = hsp.object_owner and index_name = hsp.object_name)
+			when o.object_type = 'INDEX PARTITION'		 then (select ip.index_owner||'.'||ip.index_name  ||'(index),'||i.table_owner||'.'||i.table_name||'(table)'	 from dba_ind_partitions ip,dba_indexes i	 where ip.index_owner = hsp.object_owner and ip.partition_name = hsp.object_name and ip.index_owner = i.owner and ip.index_name = i.index_name)
+				when o.object_type = 'INDEX SUBPARTITION'	 then (select isp.index_owner||'.'||isp.index_name||'(index),'||i.table_owner||'.'||i.table_name||'(table)'	 from dba_ind_subpartitions isp,dba_indexes i where isp.index_owner = hsp.object_owner and isp.subpartition_name = hsp.object_name and isp.index_owner = i.owner and isp.index_name = i.index_name)
+		else null end parent_name
+		from hsp
+		 left outer join  dba_objects o on hsp.object# = o.object_id
+		 )
+order by object_owner, object_name, object_type, subobject_name
+;]]></sql>
+		</query>
+			<pdf version="VERSION_1_7" compression="CONTENT">
+				<docproperty title="" author="" subject="" keywords="" />
+				<cell toppadding="2" bottompadding="2" leftpadding="2" rightpadding="2" horizontalalign="LEFT" verticalalign="TOP" wrap="true" />
+				<column>
+					<heading font="null" size="10" style="NORMAL" color="-16777216" rowshading="-1" labeling="FIRST_PAGE" />
+					<footing font="null" size="10" style="NORMAL" color="-16777216" rowshading="-1" labeling="NONE" />
+					<blob blob="NONE" zip="false" />
+				</column>
+				<table font="null" size="10" style="NORMAL" color="-16777216" userowshading="false" oddrowshading="-1" evenrowshading="-1" showborders="true" spacingbefore="12" spacingafter="12" horizontalalign="LEFT" />
+				<header enable="false" generatedate="false">
+					<data>
+					
+					
+					
+					
+					
+					
+					
+					
+					
+					
+					
+					
+					
+					
+					
+					
+					
+					
+					
+					
+					
+					
+					
+					
+					
+					
+					
+					
+					
+					
+					
+					
+					
+					
+					
+					
+					
+					
+					
+					
+					
+					
+					
+					
+					
+					
+					
+					
+					
+					
+					
+					
+					
+					
+					
+					
+					
+					
+					
+					
+					
+					
+					
+					
+					
+					
+					
+					
+					
+					
+					
+					
+					
+					
+					
+					
+					
+					
+					
+					
+					
+					null																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																								</data>
+				</header>
+				<footer enable="false" generatedate="false">
+					<data value="null" />
+				</footer>
+				<pagesetup papersize="LETTER" orientation="1" measurement="in" margintop="1.0" marginbottom="1.0" marginleft="1.0" marginright="1.0" />
+			</pdf>
+	</display>
+	<display id="null" type="" style="Table" enable="true">
+		<name><![CDATA[tables_stats_cols]]></name>
+		<description><![CDATA[]]></description>
+		<tooltip><![CDATA[]]></tooltip>
+		<drillclass><![CDATA[]]></drillclass>
+		<CustomValues>
+			<TYPE><![CDATA[horizontal]]></TYPE>
+		</CustomValues>
+		<query>
+			<sql><![CDATA[with hsp as (select /*+ no_merge */ * from  dba_hist_sql_plan where dbid = :DBID and sql_id = :SQL_ID and plan_hash_value = :PLAN_HASH_VALUE and object# is not null)
+select distinct
+	 tcs.owner
+	,tcs.table_name
+	,tcs.column_name
+	,tcs.histogram
+	,tcs.num_distinct
+	,tcs.num_buckets
+	,to_char(tcs.last_analyzed,'yyyy-mm-dd hh24:mi:ss') last_analyzed
+	,tcs.avg_col_len
+	,tcs.user_stats
+	,tcs.num_nulls
+	,tcs.low_value
+	,tcs.high_value
+	,tcs.density
+	,tcs.sample_size
+	,tcs.global_stats
+from dba_tab_col_statistics tcs
+where  exists
+(	 select null
+	from hsp
+		 left outer join  dba_objects o on hsp.object# = o.object_id
+	where  tcs.owner||'.'||tcs.table_name =			case
+			when o.object_type = 'TABLE'				 then hsp.object_owner||'.'||hsp.object_name
+			when o.object_type = 'TABLE PARTITION'		 then (select table_owner||'.'||table_name||'(table)' from dba_tab_partitions	 where table_owner = hsp.object_owner and partition_name = hsp.object_name)
+			when o.object_type = 'TABLE SUBPARTITION'	 then (select table_owner||'.'||table_name||'(table)' from dba_tab_subpartitions where table_owner = hsp.object_owner and subpartition_name = hsp.object_name)
+			when o.object_type = 'INDEX'				 then (select table_owner||'.'||table_name||'(table)' from dba_indexes			 where		 owner = hsp.object_owner and index_name = hsp.object_name)
+			when o.object_type = 'INDEX PARTITION'		 then (select ip.index_owner||'.'||ip.index_name  ||'(index),'||i.table_owner||'.'||i.table_name||'(table)'	 from dba_ind_partitions ip,dba_indexes i	 where ip.index_owner = hsp.object_owner and ip.partition_name = hsp.object_name and ip.index_owner = i.owner and ip.index_name = i.index_name)
+			when o.object_type = 'INDEX SUBPARTITION'	 then (select isp.index_owner||'.'||isp.index_name||'(index),'||i.table_owner||'.'||i.table_name||'(table)'	 from dba_ind_subpartitions isp,dba_indexes i where isp.index_owner = hsp.object_owner and isp.subpartition_name = hsp.object_name and isp.index_owner = i.owner and isp.index_name = i.index_name)
+		else null end
+	)
+order by tcs.owner,tcs.table_name,tcs.column_name]]></sql>
+		</query>
+			<pdf version="VERSION_1_7" compression="CONTENT">
+				<docproperty title="" author="" subject="" keywords="" />
+				<cell toppadding="2" bottompadding="2" leftpadding="2" rightpadding="2" horizontalalign="LEFT" verticalalign="TOP" wrap="true" />
+				<column>
+					<heading font="null" size="10" style="NORMAL" color="-16777216" rowshading="-1" labeling="FIRST_PAGE" />
+					<footing font="null" size="10" style="NORMAL" color="-16777216" rowshading="-1" labeling="NONE" />
+					<blob blob="NONE" zip="false" />
+				</column>
+				<table font="null" size="10" style="NORMAL" color="-16777216" userowshading="false" oddrowshading="-1" evenrowshading="-1" showborders="true" spacingbefore="12" spacingafter="12" horizontalalign="LEFT" />
+				<header enable="false" generatedate="false">
+					<data>
+					
+					
+					
+					
+					
+					
+					
+					
+					
+					
+					
+					
+					
+					
+					
+					
+					
+					
+					
+					
+					
+					
+					
+					
+					
+					
+					
+					
+					
+					
+					
+					
+					
+					
+					
+					
+					
+					
+					
+					
+					
+					
+					
+					
+					
+					
+					
+					
+					
+					
+					
+					
+					
+					
+					
+					
+					
+					
+					
+					
+					
+					
+					
+					
+					
+					
+					
+					
+					
+					
+					
+					
+					
+					
+					
+					
+					
+					
+					
+					
+					
+					null																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																												</data>
+				</header>
+				<footer enable="false" generatedate="false">
+					<data value="null" />
+				</footer>
+				<pagesetup papersize="LETTER" orientation="1" measurement="in" margintop="1.0" marginbottom="1.0" marginleft="1.0" marginright="1.0" />
+			</pdf>
+	</display>
+	<display id="null" type="" style="Table" enable="true">
+		<name><![CDATA[indexes]]></name>
+		<description><![CDATA[]]></description>
+		<tooltip><![CDATA[]]></tooltip>
+		<drillclass><![CDATA[]]></drillclass>
+		<CustomValues>
+			<TYPE><![CDATA[horizontal]]></TYPE>
+		</CustomValues>
+		<query>
+			<sql><![CDATA[select distinct
+	i.table_owner
+	,i.table_name
+	,i.owner index_owner
+	,i.index_name
+	,i.index_type
+	,i.partitioned
+	,c.column_name
+	,c.column_position
+	,p.options
+	,p.access_predicates
+	,p.filter_predicates
+	,p.position
+	,i.blevel
+	,i.leaf_blocks
+	,i.distinct_keys
+	,i.avg_leaf_blocks_per_key
+	,i.avg_leaf_blocks_per_key
+	,i.avg_data_blocks_per_key
+	,i.clustering_factor
+	,i.status
+	,i.num_rows
+	,i.sample_size
+	,to_char(i.last_analyzed,'yyyy-mm-dd hh24:mi:ss') last_analyzed
+from dba_indexes i
+	join dba_ind_columns c	  on i.index_name = c.index_name  and i.owner = c.index_owner
+	join dba_hist_sql_plan p  on i.index_name = p.object_name and i.owner = p.object_owner
+where 1=1
+	and p.sql_id=:SQL_ID
+	and p.plan_hash_value = :PLAN_HASH_VALUE
+	and object_type like '%INDEX%' and object_name is not null
+order by p.position,i.table_owner,i.table_name,i.index_name,c.column_position,c.column_name]]></sql>
+		</query>
+			<pdf version="VERSION_1_7" compression="CONTENT">
+				<docproperty title="" author="" subject="" keywords="" />
+				<cell toppadding="2" bottompadding="2" leftpadding="2" rightpadding="2" horizontalalign="LEFT" verticalalign="TOP" wrap="true" />
+				<column>
+					<heading font="null" size="10" style="NORMAL" color="-16777216" rowshading="-1" labeling="FIRST_PAGE" />
+					<footing font="null" size="10" style="NORMAL" color="-16777216" rowshading="-1" labeling="NONE" />
+					<blob blob="NONE" zip="false" />
+				</column>
+				<table font="null" size="10" style="NORMAL" color="-16777216" userowshading="false" oddrowshading="-1" evenrowshading="-1" showborders="true" spacingbefore="12" spacingafter="12" horizontalalign="LEFT" />
+				<header enable="false" generatedate="false">
+					<data>
+					
+					
+					
+					
+					
+					
+					
+					
+					
+					
+					
+					
+					
+					
+					
+					
+					
+					
+					
+					
+					
+					
+					
+					
+					
+					
+					
+					
+					
+					
+					
+					
+					
+					
+					
+					
+					
+					
+					
+					
+					
+					
+					
+					
+					
+					
+					
+					
+					
+					
+					
+					
+					
+					
+					
+					
+					
+					
+					
+					
+					
+					
+					
+					
+					
+					
+					
+					
+					
+					
+					
+					
+					
+					
+					
+					
+					
+					
+					
+					
+					
+					null																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																								</data>
+				</header>
+				<footer enable="false" generatedate="false">
+					<data value="null" />
+				</footer>
+				<pagesetup papersize="LETTER" orientation="1" measurement="in" margintop="1.0" marginbottom="1.0" marginleft="1.0" marginright="1.0" />
+			</pdf>
+	</display>
+	<display id="null" type="" style="Table" enable="true">
+		<name><![CDATA[stats_history]]></name>
+		<description><![CDATA[]]></description>
+		<tooltip><![CDATA[]]></tooltip>
+		<drillclass><![CDATA[]]></drillclass>
+		<CustomValues>
+			<TYPE><![CDATA[horizontal]]></TYPE>
+		</CustomValues>
+		<query>
+			<sql><![CDATA[with hsp as (	  select /*+ no_merge */ distinct object_owner,object_name,object#
+				from  dba_hist_sql_plan
+				where dbid = :DBID and sql_id = :SQL_ID and plan_hash_value = :PLAN_HASH_VALUE and object# is not null),
+	 st	 as (	select obj#,savtime,rowcnt from sys.wri$_optstat_ind_history si
+				union
+				select obj#,savtime,rowcnt from sys.wri$_optstat_tab_history st)
+select /*+ leading(hsp st o) */
+	 hsp.object_owner
+	,hsp.object_name
+	,hsp.object#
+	--,o.object_type
+	,to_char (savtime,'yyyy-mm-dd hh24:mi:ss') savtime
+	,rowcnt
+from hsp
+	 left outer join  st			on hsp.object# = st.obj#
+	 left outer join  dba_objects o on hsp.object# = o.object_id
+order by hsp.object_owner,hsp.object_name,savtime]]></sql>
+		</query>
+			<pdf version="VERSION_1_7" compression="CONTENT">
+				<docproperty title="" author="" subject="" keywords="" />
+				<cell toppadding="2" bottompadding="2" leftpadding="2" rightpadding="2" horizontalalign="LEFT" verticalalign="TOP" wrap="true" />
+				<column>
+					<heading font="null" size="10" style="NORMAL" color="-16777216" rowshading="-1" labeling="FIRST_PAGE" />
+					<footing font="null" size="10" style="NORMAL" color="-16777216" rowshading="-1" labeling="NONE" />
+					<blob blob="NONE" zip="false" />
+				</column>
+				<table font="null" size="10" style="NORMAL" color="-16777216" userowshading="false" oddrowshading="-1" evenrowshading="-1" showborders="true" spacingbefore="12" spacingafter="12" horizontalalign="LEFT" />
+				<header enable="false" generatedate="false">
+					<data>
+					
+					
+					
+					
+					
+					
+					
+					
+					
+					
+					
+					
+					
+					
+					
+					
+					
+					
+					
+					
+					
+					
+					
+					
+					
+					
+					
+					
+					
+					
+					
+					
+					
+					
+					
+					
+					
+					
+					
+					
+					
+					
+					
+					
+					
+					
+					
+					
+					
+					
+					
+					
+					
+					
+					
+					
+					
+					
+					
+					
+					
+					
+					
+					
+					
+					
+					
+					
+					
+					
+					
+					
+					
+					
+					
+					
+					
+					
+					
+					
+					
+					null																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																			</data>
+				</header>
+				<footer enable="false" generatedate="false">
+					<data value="null" />
+				</footer>
+				<pagesetup papersize="LETTER" orientation="1" measurement="in" margintop="1.0" marginbottom="1.0" marginleft="1.0" marginright="1.0" />
+			</pdf>
+	</display>
+	<display id="null" type="" style="Script" enable="true">
+		<name><![CDATA[awr reports]]></name>
+		<description><![CDATA[]]></description>
+		<tooltip><![CDATA[]]></tooltip>
+		<drillclass><![CDATA[]]></drillclass>
+		<CustomValues>
+		</CustomValues>
+		<query>
+			<sql><![CDATA[set trimspool on
+set pages 10000
+set linesize 1000
+set long 1000000
+set longchunksize 1000000
+set feedback off
+set heading off
+set sqlprompt ''
+set echo off verify off time off timing off
+set termout off
+spool F:\work\temp\awr_sql_report.html
+select * from table(dbms_workload_repository.awr_sql_report_html(:DBID, :INSTANCE_NUMBER, :SNAP_ID -1, :SNAP_ID, :SQL_ID));
+spool off
+
+set termout on
+spool F:\work\temp\ash_sql_report.html
+select * from table(dbms_workload_repository.ash_global_report_html(:DBID, :INSTANCE_NUMBER, cast(:BEGIN_INTERVAL_TIME as date), cast(:END_INTERVAL_TIME as date), l_sql_id=> :SQL_ID);
+spool off
+
+set termout on heading on
+select	'F:\work\temp\awr_sql_report.html'  as "AWR Report" from dual;
+select	'F:\work\temp\ash_sql_report.html'  as "ASH Report" from dual;]]></sql>
+		</query>
+			<pdf version="VERSION_1_7" compression="CONTENT">
+				<docproperty title="" author="" subject="" keywords="" />
+				<cell toppadding="2" bottompadding="2" leftpadding="2" rightpadding="2" horizontalalign="LEFT" verticalalign="TOP" wrap="true" />
+				<column>
+					<heading font="null" size="10" style="NORMAL" color="-16777216" rowshading="-1" labeling="FIRST_PAGE" />
+					<footing font="null" size="10" style="NORMAL" color="-16777216" rowshading="-1" labeling="NONE" />
+					<blob blob="NONE" zip="false" />
+				</column>
+				<table font="null" size="10" style="NORMAL" color="-16777216" userowshading="false" oddrowshading="-1" evenrowshading="-1" showborders="true" spacingbefore="12" spacingafter="12" horizontalalign="LEFT" />
+				<header enable="false" generatedate="false">
+					<data>
+					
+					
+					
+					
+					
+					
+					
+					
+					
+					
+					
+					
+					
+					
+					
+					
+					
+					
+					
+					
+					
+					
+					
+					
+					
+					
+					
+					
+					
+					
+					
+					
+					
+					
+					
+					
+					
+					
+					
+					
+					
+					
+					
+					
+					
+					
+					
+					
+					
+					
+					
+					
+					
+					
+					
+					
+					
+					null																																																																																																																																																																																																																																																																																																		</data>
+				</header>
+				<footer enable="false" generatedate="false">
+					<data value="null" />
+				</footer>
+				<pagesetup papersize="LETTER" orientation="1" measurement="in" margintop="1.0" marginbottom="1.0" marginleft="1.0" marginright="1.0" />
+			</pdf>
+	</display>
+	<display id="null" type="" style="Table" enable="true">
+		<name><![CDATA[sqlt]]></name>
+		<description><![CDATA[]]></description>
+		<tooltip><![CDATA[]]></tooltip>
+		<drillclass><![CDATA[]]></drillclass>
+		<CustomValues>
+			<TYPE><![CDATA[horizontal]]></TYPE>
+		</CustomValues>
+		<query>
+			<sql><![CDATA[select 'XTRACT' method, 'echo exit | sqlplus / as sysdba @/oraback/tfa/tfa_home/ext/sqlt/run/sqltxtract.sql '||:SQL_ID  command from dual union all
+select 'XECUTE' method, 'echo exit | sqlplus / as sysdba @/oraback/tfa/tfa_home/ext/sqlt/run/sqltxecute.sql '||:SQL_ID  command from dual union all
+select 'XTRXEC' method, 'echo exit | sqlplus / as sysdba @/oraback/tfa/tfa_home/ext/sqlt/run/sqltxtrxec.sql '||:SQL_ID  command from dual union all
+select 'XPLAIN' method, 'echo exit | sqlplus / as sysdba @/oraback/tfa/tfa_home/ext/sqlt/run/sqltxplain.sql '||:SQL_ID  command from dual]]></sql>
+		</query>
+			<pdf version="VERSION_1_7" compression="CONTENT">
+				<docproperty title="" author="" subject="" keywords="" />
+				<cell toppadding="2" bottompadding="2" leftpadding="2" rightpadding="2" horizontalalign="LEFT" verticalalign="TOP" wrap="true" />
+				<column>
+					<heading font="null" size="10" style="NORMAL" color="-16777216" rowshading="-1" labeling="FIRST_PAGE" />
+					<footing font="null" size="10" style="NORMAL" color="-16777216" rowshading="-1" labeling="NONE" />
+					<blob blob="NONE" zip="false" />
+				</column>
+				<table font="null" size="10" style="NORMAL" color="-16777216" userowshading="false" oddrowshading="-1" evenrowshading="-1" showborders="true" spacingbefore="12" spacingafter="12" horizontalalign="LEFT" />
+				<header enable="false" generatedate="false">
+					<data>
+					
+					
+					
+					
+					
+					
+					
+					
+					
+					
+					
+					
+					
+					
+					
+					
+					
+					
+					
+					
+					
+					
+					
+					
+					
+					
+					
+					
+					
+					
+					
+					
+					
+					
+					
+					
+					
+					
+					
+					
+					
+					
+					
+					
+					
+					
+					
+					
+					
+					
+					
+					
+					
+					
+					
+					
+					
+					null																																																																																																																																																																																																																																																																																																		</data>
+				</header>
+				<footer enable="false" generatedate="false">
+					<data value="null" />
+				</footer>
+				<pagesetup papersize="LETTER" orientation="1" measurement="in" margintop="1.0" marginbottom="1.0" marginleft="1.0" marginright="1.0" />
+			</pdf>
+	</display>
+</display>
+</displays>
