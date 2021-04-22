@@ -12,11 +12,11 @@
 		<sql><![CDATA[-- -----------------------------------------------------------------------------
 -- Author      : Masked DevOps
 -- Date        : Jan 2012
--- Version     : 0.1
+-- Version     : 0.2
 -- -----------------------------------------------------------------------------
 with
 	parms as (select :P_INST_ID instance_number,:P_SQL_ID sql_id from dual)
-select
+select /*+ NO_PARALLEL */
 	 sql.sql_id
 	,child_number
 	,plan_hash_value
@@ -124,7 +124,7 @@ where 1=1
 			<bind id="P_SQL_ID">
 				<prompt><![CDATA[P_SQL_ID]]></prompt>
 				<tooltip><![CDATA[P_SQL_ID]]></tooltip>
-				<value><![CDATA[7tsdfm7fg7ptr]]></value>
+				<value><![CDATA[0pmd32sb8h90b]]></value>
 				<bracket><![CDATA[null]]></bracket>
 			</bind>
 		</binds>
@@ -221,7 +221,26 @@ where 1=1
 				
 				
 				
-				null																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																				</data>
+				
+				
+				
+				
+				
+				
+				
+				
+				
+				
+				
+				
+				
+				
+				
+				
+				
+				
+				
+				null																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																</data>
 			</header>
 			<footer enable="false" generatedate="false">
 				<data value="null" />
@@ -338,7 +357,26 @@ where 1=1
 					
 					
 					
-					null																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																												</data>
+					
+					
+					
+					
+					
+					
+					
+					
+					
+					
+					
+					
+					
+					
+					
+					
+					
+					
+					
+					null																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																											</data>
 				</header>
 				<footer enable="false" generatedate="false">
 					<data value="null" />
@@ -464,7 +502,26 @@ select * from hist_sqlbind]]></sql>
 					
 					
 					
-					null																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																													</data>
+					
+					
+					
+					
+					
+					
+					
+					
+					
+					
+					
+					
+					
+					
+					
+					
+					
+					
+					
+					null																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																												</data>
 				</header>
 				<footer enable="false" generatedate="false">
 					<data value="null" />
@@ -657,7 +714,26 @@ from dual;]]></sql>
 					
 					
 					
-					null																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																													</data>
+					
+					
+					
+					
+					
+					
+					
+					
+					
+					
+					
+					
+					
+					
+					
+					
+					
+					
+					
+					null																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																												</data>
 				</header>
 				<footer enable="false" generatedate="false">
 					<data value="null" />
@@ -768,7 +844,26 @@ from dual;]]></sql>
 					
 					
 					
-					null																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																													</data>
+					
+					
+					
+					
+					
+					
+					
+					
+					
+					
+					
+					
+					
+					
+					
+					
+					
+					
+					
+					null																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																												</data>
 				</header>
 				<footer enable="false" generatedate="false">
 					<data value="null" />
@@ -879,7 +974,26 @@ from dual;]]></sql>
 					
 					
 					
-					null																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																								</data>
+					
+					
+					
+					
+					
+					
+					
+					
+					
+					
+					
+					
+					
+					
+					
+					
+					
+					
+					
+					null																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																							</data>
 				</header>
 				<footer enable="false" generatedate="false">
 					<data value="null" />
@@ -896,7 +1010,7 @@ from dual;]]></sql>
 			<TYPE><![CDATA[horizontal]]></TYPE>
 		</CustomValues>
 		<query>
-			<sql><![CDATA[select *
+			<sql><![CDATA[select /*+ NO_PARALLEL */ *
 from dba_sql_plan_baselines
 where signature in (select exact_matching_signature from v$sql where sql_id = :SQL_ID)]]></sql>
 		</query>
@@ -992,7 +1106,26 @@ where signature in (select exact_matching_signature from v$sql where sql_id = :S
 					
 					
 					
-					null																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																												</data>
+					
+					
+					
+					
+					
+					
+					
+					
+					
+					
+					
+					
+					
+					
+					
+					
+					
+					
+					
+					null																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																											</data>
 				</header>
 				<footer enable="false" generatedate="false">
 					<data value="null" />
@@ -1023,7 +1156,7 @@ from dual;
 select 'select * from table(dbms_sqltune.select_sqlset('''||:SNAP_ID||'.'||:SQL_ID||'.'||:PLAN_HASH_VALUE||'''));'||chr(10) sql_text from dual; 
 select 'select * from   dba_sql_plan_baselines;'||chr(10) sql_text from dual;
 
-select
+select /*+ NO_PARALLEL */
     '-- If replace with a hinted plan run:'||chr(10)||
     'select sql_handle,plan_name,origin,enabled,accepted,fixed from dba_sql_plan_baselines where signature in (select dbms_sqltune.sqltext_to_signature(sql_text) from dba_hist_sqltext where sql_id='||:SQL_ID||');'||chr(10)||
     'variable l_rc number'||chr(10)||
@@ -1160,7 +1293,26 @@ and (  signature in (select dbms_sqltune.sqltext_to_signature(sql_text) from dba
 					
 					
 					
-					null																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																								</data>
+					
+					
+					
+					
+					
+					
+					
+					
+					
+					
+					
+					
+					
+					
+					
+					
+					
+					
+					
+					null																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																							</data>
 				</header>
 				<footer enable="false" generatedate="false">
 					<data value="null" />
@@ -1274,7 +1426,26 @@ where signature in (select exact_matching_signature from gv$sql where sql_id = :
 					
 					
 					
-					null																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																												</data>
+					
+					
+					
+					
+					
+					
+					
+					
+					
+					
+					
+					
+					
+					
+					
+					
+					
+					
+					
+					null																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																											</data>
 				</header>
 				<footer enable="false" generatedate="false">
 					<data value="null" />
@@ -1292,7 +1463,7 @@ where signature in (select exact_matching_signature from gv$sql where sql_id = :
 		</CustomValues>
 		<query>
 			<sql><![CDATA[select hint
-from (select p.name, p.signature, p.category,
+from (select /*+ NO_PARALLEL */ p.name, p.signature, p.category,
 			 row_number() over (partition by sd.signature, sd.category order by sd.signature) row_num,
 			 extractValue(value(t), '/hint') hint
 	  from sys.sqlobj$data sd, dba_sql_profiles p, table(xmlsequence(extract(xmltype(sd.comp_data),'/outline_data/hint'))) t
@@ -1393,7 +1564,26 @@ from (select p.name, p.signature, p.category,
 					
 					
 					
-					null																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																												</data>
+					
+					
+					
+					
+					
+					
+					
+					
+					
+					
+					
+					
+					
+					
+					
+					
+					
+					
+					
+					null																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																											</data>
 				</header>
 				<footer enable="false" generatedate="false">
 					<data value="null" />
@@ -1544,7 +1734,26 @@ from dual]]></sql>
 					
 					
 					
-					null																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																								</data>
+					
+					
+					
+					
+					
+					
+					
+					
+					
+					
+					
+					
+					
+					
+					
+					
+					
+					
+					
+					null																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																							</data>
 				</header>
 				<footer enable="false" generatedate="false">
 					<data value="null" />
@@ -1563,7 +1772,7 @@ from dual]]></sql>
 		<query>
 			<sql><![CDATA[with hsp as (select /*+ no_merge */ distinct object_owner,object_name,object# from  v$sql_plan where sql_id = :SQL_ID and plan_hash_value = :PLAN_HASH_VALUE and object# is not null),
 	parms as (select :P_INST_ID instance_number,:P_SQL_ID sql_id from dual)
-select distinct
+select /*+ NO_PARALLEL */ distinct
 	 object_owner
 	,'SQLDEV:LINK:'||object_owner||':'||object_type||':'||object_name||':oracle.dbtools.raptor.controls.grid.DefaultDrillLink' object_name
 	,object_id
@@ -1727,7 +1936,26 @@ order by object_owner, object_name, object_type, subobject_name
 					
 					
 					
-					null																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																							</data>
+					
+					
+					
+					
+					
+					
+					
+					
+					
+					
+					
+					
+					
+					
+					
+					
+					
+					
+					
+					null																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																						</data>
 				</header>
 				<footer enable="false" generatedate="false">
 					<data value="null" />
@@ -1747,7 +1975,7 @@ order by object_owner, object_name, object_type, subobject_name
 			<sql><![CDATA[with
 	hsp as (select /*+ no_merge */ * from  v$sql_plan where sql_id = :SQL_ID and child_number = :CHILD_NUMBER and plan_hash_value = :PLAN_HASH_VALUE and object# is not null),
 	parms as (select :P_INST_ID instance_number,:P_SQL_ID sql_id from dual)
-select distinct
+select /*+ NO_PARALLEL */ distinct
 	 tcs.owner
 	,tcs.table_name
 	,tcs.column_name
@@ -1871,7 +2099,26 @@ order by tcs.owner,tcs.table_name,tcs.column_name]]></sql>
 					
 					
 					
-					null																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																		</data>
+					
+					
+					
+					
+					
+					
+					
+					
+					
+					
+					
+					
+					
+					
+					
+					
+					
+					
+					
+					null																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																	</data>
 				</header>
 				<footer enable="false" generatedate="false">
 					<data value="null" />
@@ -1888,7 +2135,7 @@ order by tcs.owner,tcs.table_name,tcs.column_name]]></sql>
 			<TYPE><![CDATA[horizontal]]></TYPE>
 		</CustomValues>
 		<query>
-			<sql><![CDATA[select distinct
+			<sql><![CDATA[select /*+ NO_PARALLEL */ distinct
 	i.table_owner
 	,i.table_name
 	,i.owner index_owner
@@ -2014,7 +2261,26 @@ order by p.position,i.table_owner,i.table_name,i.index_name,c.column_position,c.
 					
 					
 					
-					null																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																							</data>
+					
+					
+					
+					
+					
+					
+					
+					
+					
+					
+					
+					
+					
+					
+					
+					
+					
+					
+					
+					null																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																						</data>
 				</header>
 				<footer enable="false" generatedate="false">
 					<data value="null" />
@@ -2033,7 +2299,7 @@ order by p.position,i.table_owner,i.table_name,i.index_name,c.column_position,c.
 		<query>
 			<sql><![CDATA[with
 	parms as (select :P_INST_ID instance_number,:P_SQL_ID sql_id from dual)
-select
+select /*+ NO_PARALLEL */
 	substr(s.sql_text,1,100) sql_text
    ,s.sql_id
    ,to_char(s.last_active_time,'yyyy-mm-dd hh24:mi:ss') last_active_time
@@ -2161,7 +2427,26 @@ where s.sql_id = :SQL_ID]]></sql>
 					
 					
 					
-					null																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																										</data>
+					
+					
+					
+					
+					
+					
+					
+					
+					
+					
+					
+					
+					
+					
+					
+					
+					
+					
+					
+					null																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																									</data>
 				</header>
 				<footer enable="false" generatedate="false">
 					<data value="null" />
@@ -2262,7 +2547,26 @@ select value from v$diag_info where name in ('Diag Trace');]]></sql>
 					
 					
 					
-					null																																																																																																																																																																																																																																																																																																																																																														</data>
+					
+					
+					
+					
+					
+					
+					
+					
+					
+					
+					
+					
+					
+					
+					
+					
+					
+					
+					
+					null																																																																																																																																																																																																																																																																																																																																																																																																																																																													</data>
 				</header>
 				<footer enable="false" generatedate="false">
 					<data value="null" />
@@ -2353,7 +2657,26 @@ select 'SQLHC'  method, 'echo exit | sqlplus / as sysdba @sqlhc.sql T '||:SQL_ID
 					
 					
 					
-					null																																																																																																																																																																																																																																																																																																		</data>
+					
+					
+					
+					
+					
+					
+					
+					
+					
+					
+					
+					
+					
+					
+					
+					
+					
+					
+					
+					null																																																																																																																																																																																																																																																																																																																																																																																																	</data>
 				</header>
 				<footer enable="false" generatedate="false">
 					<data value="null" />
