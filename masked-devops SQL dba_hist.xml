@@ -12,7 +12,7 @@
 		<sql><![CDATA[-- -----------------------------------------------------------------------------
 -- Author      : Masked DevOps
 -- Date        : Jan 2012
--- Version     : 0.1
+-- Version     : 0.2
 -- -----------------------------------------------------------------------------
 select
 	 count(distinct plan_hash_value)	   over (partition by s.sql_id )					   plans_tot	-- sql_id/plans total
