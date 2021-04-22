@@ -64,7 +64,7 @@ order by s.sql_id,begin_interval_time]]></sql>
 			<bind id="SQL_ID">
 				<prompt><![CDATA[SQL_ID]]></prompt>
 				<tooltip><![CDATA[SQL_ID]]></tooltip>
-				<value><![CDATA[7tsdfm7fg7ptr]]></value>
+				<value><![CDATA[27srn6t5p6bgd]]></value>
 				<bracket><![CDATA[null]]></bracket>
 			</bind>
 			<bind id="DIM">
@@ -167,14 +167,33 @@ order by s.sql_id,begin_interval_time]]></sql>
 				
 				
 				
-				null																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																								</data>
+				
+				
+				
+				
+				
+				
+				
+				
+				
+				
+				
+				
+				
+				
+				
+				
+				
+				
+				
+				null																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																				</data>
 			</header>
 			<footer enable="false" generatedate="false">
 				<data value="null" />
 			</footer>
 			<pagesetup papersize="LETTER" orientation="1" measurement="in" margintop="1.0" marginbottom="1.0" marginleft="1.0" marginright="1.0" />
 		</pdf>
-	<display id="null" type="" style="Table" enable="true">
+	<display id="" type="" style="Table" enable="true">
 		<name><![CDATA[sql fulltext]]></name>
 		<description><![CDATA[]]></description>
 		<tooltip><![CDATA[]]></tooltip>
@@ -186,6 +205,26 @@ order by s.sql_id,begin_interval_time]]></sql>
 			<sql><![CDATA[select 'gv$sqlstats' dict_view, null dbid,sql_fulltext	   from gv$sqlstats where inst_id = :INSTANCE_NUMBER and sql_id = :SQL_ID and plan_hash_value = :PLAN_HASH_VALUE
 union all
 select 'dba_hist_sqltext' dict_view,dbid, sql_text	from dba_hist_sqltext where sql_id = :SQL_ID]]></sql>
+			<binds>
+				<bind id="INSTANCE_NUMBER">
+					<prompt><![CDATA[INSTANCE_NUMBER]]></prompt>
+					<tooltip><![CDATA[INSTANCE_NUMBER]]></tooltip>
+					<value><![CDATA[NULL_VALUE]]></value>
+					<bracket><![CDATA[null]]></bracket>
+				</bind>
+				<bind id="SQL_ID">
+					<prompt><![CDATA[SQL_ID]]></prompt>
+					<tooltip><![CDATA[SQL_ID]]></tooltip>
+					<value><![CDATA[NULL_VALUE]]></value>
+					<bracket><![CDATA[null]]></bracket>
+				</bind>
+				<bind id="PLAN_HASH_VALUE">
+					<prompt><![CDATA[PLAN_HASH_VALUE]]></prompt>
+					<tooltip><![CDATA[PLAN_HASH_VALUE]]></tooltip>
+					<value><![CDATA[NULL_VALUE]]></value>
+					<bracket><![CDATA[null]]></bracket>
+				</bind>
+			</binds>
 		</query>
 			<pdf version="VERSION_1_7" compression="CONTENT">
 				<docproperty title="" author="" subject="" keywords="" />
@@ -279,7 +318,26 @@ select 'dba_hist_sqltext' dict_view,dbid, sql_text	from dba_hist_sqltext where s
 					
 					
 					
-					null																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																								</data>
+					
+					
+					
+					
+					
+					
+					
+					
+					
+					
+					
+					
+					
+					
+					
+					
+					
+					
+					
+					null																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																							</data>
 				</header>
 				<footer enable="false" generatedate="false">
 					<data value="null" />
@@ -287,7 +345,7 @@ select 'dba_hist_sqltext' dict_view,dbid, sql_text	from dba_hist_sqltext where s
 				<pagesetup papersize="LETTER" orientation="1" measurement="in" margintop="1.0" marginbottom="1.0" marginleft="1.0" marginright="1.0" />
 			</pdf>
 	</display>
-	<display id="null" type="" style="Table" enable="true">
+	<display id="" type="" style="Table" enable="true">
 		<name><![CDATA[gv$sql]]></name>
 		<description><![CDATA[]]></description>
 		<tooltip><![CDATA[]]></tooltip>
@@ -386,6 +444,20 @@ select 'dba_hist_sqltext' dict_view,dbid, sql_text	from dba_hist_sqltext where s
 	,io_cell_offload_returned_bytes
 from gv$sql where inst_id = :INSTANCE_NUMBER and sql_id = :SQL_ID
 order by child_number]]></sql>
+			<binds>
+				<bind id="INSTANCE_NUMBER">
+					<prompt><![CDATA[INSTANCE_NUMBER]]></prompt>
+					<tooltip><![CDATA[INSTANCE_NUMBER]]></tooltip>
+					<value><![CDATA[NULL_VALUE]]></value>
+					<bracket><![CDATA[null]]></bracket>
+				</bind>
+				<bind id="SQL_ID">
+					<prompt><![CDATA[SQL_ID]]></prompt>
+					<tooltip><![CDATA[SQL_ID]]></tooltip>
+					<value><![CDATA[NULL_VALUE]]></value>
+					<bracket><![CDATA[null]]></bracket>
+				</bind>
+			</binds>
 		</query>
 			<pdf version="VERSION_1_7" compression="CONTENT">
 				<docproperty title="" author="" subject="" keywords="" />
@@ -479,7 +551,26 @@ order by child_number]]></sql>
 					
 					
 					
-					null																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																													</data>
+					
+					
+					
+					
+					
+					
+					
+					
+					
+					
+					
+					
+					
+					
+					
+					
+					
+					
+					
+					null																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																												</data>
 				</header>
 				<footer enable="false" generatedate="false">
 					<data value="null" />
@@ -487,7 +578,7 @@ order by child_number]]></sql>
 				<pagesetup papersize="LETTER" orientation="1" measurement="in" margintop="1.0" marginbottom="1.0" marginleft="1.0" marginright="1.0" />
 			</pdf>
 	</display>
-	<display id="null" type="" style="Table" enable="true">
+	<display id="" type="" style="Table" enable="true">
 		<name><![CDATA[binds]]></name>
 		<description><![CDATA[]]></description>
 		<tooltip><![CDATA[]]></tooltip>
@@ -512,6 +603,20 @@ order by child_number]]></sql>
 --select * from hist_sqlstat              union all
 select 'HIST_SQLBIND' view_name         ,'======='  name,'=======' position,'=======' datatype,'=======' value,'=======' datetime from dual  union all
 select * from hist_sqlbind]]></sql>
+			<binds>
+				<bind id="SQL_ID">
+					<prompt><![CDATA[SQL_ID]]></prompt>
+					<tooltip><![CDATA[SQL_ID]]></tooltip>
+					<value><![CDATA[NULL_VALUE]]></value>
+					<bracket><![CDATA[null]]></bracket>
+				</bind>
+				<bind id="INST_ID">
+					<prompt><![CDATA[INST_ID]]></prompt>
+					<tooltip><![CDATA[INST_ID]]></tooltip>
+					<value><![CDATA[NULL_VALUE]]></value>
+					<bracket><![CDATA[null]]></bracket>
+				</bind>
+			</binds>
 		</query>
 			<pdf version="VERSION_1_7" compression="CONTENT">
 				<docproperty title="" author="" subject="" keywords="" />
@@ -605,7 +710,26 @@ select * from hist_sqlbind]]></sql>
 					
 					
 					
-					null																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																														</data>
+					
+					
+					
+					
+					
+					
+					
+					
+					
+					
+					
+					
+					
+					
+					
+					
+					
+					
+					
+					null																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																													</data>
 				</header>
 				<footer enable="false" generatedate="false">
 					<data value="null" />
@@ -613,7 +737,7 @@ select * from hist_sqlbind]]></sql>
 				<pagesetup papersize="LETTER" orientation="1" measurement="in" margintop="1.0" marginbottom="1.0" marginleft="1.0" marginright="1.0" />
 			</pdf>
 	</display>
-	<display id="null" type="" style="Script" enable="true">
+	<display id="" type="" style="Script" enable="true">
 		<name><![CDATA[binds capture exec]]></name>
 		<description><![CDATA[]]></description>
 		<tooltip><![CDATA[]]></tooltip>
@@ -713,6 +837,38 @@ case sys.anydata.gettypename(value_anydata)
 	end
 from table(dbms_sqltune.extract_binds(utl_raw.cast_to_raw(:BIND_DATA))) hsb
 order by position;]]></sql>
+			<binds>
+				<bind id="PARSING_SCHEMA_NAME">
+					<prompt><![CDATA[PARSING_SCHEMA_NAME]]></prompt>
+					<tooltip><![CDATA[PARSING_SCHEMA_NAME]]></tooltip>
+					<value><![CDATA[NULL_VALUE]]></value>
+					<bracket><![CDATA[null]]></bracket>
+				</bind>
+				<bind id="SQL_ID">
+					<prompt><![CDATA[SQL_ID]]></prompt>
+					<tooltip><![CDATA[SQL_ID]]></tooltip>
+					<value><![CDATA[NULL_VALUE]]></value>
+					<bracket><![CDATA[null]]></bracket>
+				</bind>
+				<bind id="SNAP_ID">
+					<prompt><![CDATA[SNAP_ID]]></prompt>
+					<tooltip><![CDATA[SNAP_ID]]></tooltip>
+					<value><![CDATA[NULL_VALUE]]></value>
+					<bracket><![CDATA[null]]></bracket>
+				</bind>
+				<bind id="DBID">
+					<prompt><![CDATA[DBID]]></prompt>
+					<tooltip><![CDATA[DBID]]></tooltip>
+					<value><![CDATA[NULL_VALUE]]></value>
+					<bracket><![CDATA[null]]></bracket>
+				</bind>
+				<bind id="BIND_DATA">
+					<prompt><![CDATA[BIND_DATA]]></prompt>
+					<tooltip><![CDATA[BIND_DATA]]></tooltip>
+					<value><![CDATA[NULL_VALUE]]></value>
+					<bracket><![CDATA[null]]></bracket>
+				</bind>
+			</binds>
 		</query>
 			<pdf version="VERSION_1_7" compression="CONTENT">
 				<docproperty title="" author="" subject="" keywords="" />
@@ -806,7 +962,26 @@ order by position;]]></sql>
 					
 					
 					
-					null																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																														</data>
+					
+					
+					
+					
+					
+					
+					
+					
+					
+					
+					
+					
+					
+					
+					
+					
+					
+					
+					
+					null																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																													</data>
 				</header>
 				<footer enable="false" generatedate="false">
 					<data value="null" />
@@ -814,7 +989,7 @@ order by position;]]></sql>
 				<pagesetup papersize="LETTER" orientation="1" measurement="in" margintop="1.0" marginbottom="1.0" marginleft="1.0" marginright="1.0" />
 			</pdf>
 	</display>
-	<display id="null" type="" style="Table" enable="true">
+	<display id="" type="" style="Table" enable="true">
 		<name><![CDATA[display awr]]></name>
 		<description><![CDATA[]]></description>
 		<tooltip><![CDATA[]]></tooltip>
@@ -824,6 +999,26 @@ order by position;]]></sql>
 		</CustomValues>
 		<query>
 			<sql><![CDATA[select * from table(dbms_xplan.display_awr( :SQL_ID,:PLAN_HASH_VALUE,:DBID,'advanced'))]]></sql>
+			<binds>
+				<bind id="SQL_ID">
+					<prompt><![CDATA[SQL_ID]]></prompt>
+					<tooltip><![CDATA[SQL_ID]]></tooltip>
+					<value><![CDATA[NULL_VALUE]]></value>
+					<bracket><![CDATA[null]]></bracket>
+				</bind>
+				<bind id="PLAN_HASH_VALUE">
+					<prompt><![CDATA[PLAN_HASH_VALUE]]></prompt>
+					<tooltip><![CDATA[PLAN_HASH_VALUE]]></tooltip>
+					<value><![CDATA[NULL_VALUE]]></value>
+					<bracket><![CDATA[null]]></bracket>
+				</bind>
+				<bind id="DBID">
+					<prompt><![CDATA[DBID]]></prompt>
+					<tooltip><![CDATA[DBID]]></tooltip>
+					<value><![CDATA[NULL_VALUE]]></value>
+					<bracket><![CDATA[null]]></bracket>
+				</bind>
+			</binds>
 		</query>
 			<pdf version="VERSION_1_7" compression="CONTENT">
 				<docproperty title="" author="" subject="" keywords="" />
@@ -917,7 +1112,26 @@ order by position;]]></sql>
 					
 					
 					
-					null																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																														</data>
+					
+					
+					
+					
+					
+					
+					
+					
+					
+					
+					
+					
+					
+					
+					
+					
+					
+					
+					
+					null																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																													</data>
 				</header>
 				<footer enable="false" generatedate="false">
 					<data value="null" />
@@ -925,7 +1139,7 @@ order by position;]]></sql>
 				<pagesetup papersize="LETTER" orientation="1" measurement="in" margintop="1.0" marginbottom="1.0" marginleft="1.0" marginright="1.0" />
 			</pdf>
 	</display>
-	<display id="null" type="" style="Table" enable="true">
+	<display id="" type="" style="Table" enable="true">
 		<name><![CDATA[display cursor]]></name>
 		<description><![CDATA[]]></description>
 		<tooltip><![CDATA[]]></tooltip>
@@ -935,6 +1149,20 @@ order by position;]]></sql>
 		</CustomValues>
 		<query>
 			<sql><![CDATA[select * from table(dbms_xplan.display_cursor( :SQL_ID,:CHILD_NUMBER,'advanced'))]]></sql>
+			<binds>
+				<bind id="SQL_ID">
+					<prompt><![CDATA[SQL_ID]]></prompt>
+					<tooltip><![CDATA[SQL_ID]]></tooltip>
+					<value><![CDATA[NULL_VALUE]]></value>
+					<bracket><![CDATA[null]]></bracket>
+				</bind>
+				<bind id="CHILD_NUMBER">
+					<prompt><![CDATA[CHILD_NUMBER]]></prompt>
+					<tooltip><![CDATA[CHILD_NUMBER]]></tooltip>
+					<value><![CDATA[NULL_VALUE]]></value>
+					<bracket><![CDATA[null]]></bracket>
+				</bind>
+			</binds>
 		</query>
 			<pdf version="VERSION_1_7" compression="CONTENT">
 				<docproperty title="" author="" subject="" keywords="" />
@@ -1028,7 +1256,26 @@ order by position;]]></sql>
 					
 					
 					
-					null																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																									</data>
+					
+					
+					
+					
+					
+					
+					
+					
+					
+					
+					
+					
+					
+					
+					
+					
+					
+					
+					
+					null																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																								</data>
 				</header>
 				<footer enable="false" generatedate="false">
 					<data value="null" />
@@ -1036,7 +1283,7 @@ order by position;]]></sql>
 				<pagesetup papersize="LETTER" orientation="1" measurement="in" margintop="1.0" marginbottom="1.0" marginleft="1.0" marginright="1.0" />
 			</pdf>
 	</display>
-	<display id="null" type="" style="Script" enable="true">
+	<display id="" type="" style="Script" enable="true">
 		<name><![CDATA[load sql_plan_baseline]]></name>
 		<description><![CDATA[]]></description>
 		<tooltip><![CDATA[]]></tooltip>
@@ -1209,7 +1456,26 @@ and (  signature in (select dbms_sqltune.sqltext_to_signature(sql_text) from dba
 					
 					
 					
-					null																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																									</data>
+					
+					
+					
+					
+					
+					
+					
+					
+					
+					
+					
+					
+					
+					
+					
+					
+					
+					
+					
+					null																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																								</data>
 				</header>
 				<footer enable="false" generatedate="false">
 					<data value="null" />
@@ -1217,7 +1483,7 @@ and (  signature in (select dbms_sqltune.sqltext_to_signature(sql_text) from dba
 				<pagesetup papersize="LETTER" orientation="1" measurement="in" margintop="1.0" marginbottom="1.0" marginleft="1.0" marginright="1.0" />
 			</pdf>
 	</display>
-	<display id="null" type="" style="Table" enable="true">
+	<display id="" type="" style="Table" enable="true">
 		<name><![CDATA[sql_profile hint]]></name>
 		<description><![CDATA[]]></description>
 		<tooltip><![CDATA[]]></tooltip>
@@ -1328,7 +1594,26 @@ from (select p.name, p.signature, p.category,
 					
 					
 					
-					null																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																													</data>
+					
+					
+					
+					
+					
+					
+					
+					
+					
+					
+					
+					
+					
+					
+					
+					
+					
+					
+					
+					null																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																												</data>
 				</header>
 				<footer enable="false" generatedate="false">
 					<data value="null" />
@@ -1336,7 +1621,7 @@ from (select p.name, p.signature, p.category,
 				<pagesetup papersize="LETTER" orientation="1" measurement="in" margintop="1.0" marginbottom="1.0" marginleft="1.0" marginright="1.0" />
 			</pdf>
 	</display>
-	<display id="null" type="" style="Table" enable="true">
+	<display id="" type="" style="Table" enable="true">
 		<name><![CDATA[load sql_profile]]></name>
 		<description><![CDATA[]]></description>
 		<tooltip><![CDATA[]]></tooltip>
@@ -1485,7 +1770,26 @@ from dual]]></sql>
 					
 					
 					
-					null																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																									</data>
+					
+					
+					
+					
+					
+					
+					
+					
+					
+					
+					
+					
+					
+					
+					
+					
+					
+					
+					
+					null																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																								</data>
 				</header>
 				<footer enable="false" generatedate="false">
 					<data value="null" />
@@ -1493,7 +1797,7 @@ from dual]]></sql>
 				<pagesetup papersize="LETTER" orientation="1" measurement="in" margintop="1.0" marginbottom="1.0" marginleft="1.0" marginright="1.0" />
 			</pdf>
 	</display>
-	<display id="null" type="" style="Table" enable="true">
+	<display id="" type="" style="Table" enable="true">
 		<name><![CDATA[stats]]></name>
 		<description><![CDATA[]]></description>
 		<tooltip><![CDATA[]]></tooltip>
@@ -1670,7 +1974,26 @@ order by object_owner, object_name, object_type, subobject_name
 					
 					
 					
-					null																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																								</data>
+					
+					
+					
+					
+					
+					
+					
+					
+					
+					
+					
+					
+					
+					
+					
+					
+					
+					
+					
+					null																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																							</data>
 				</header>
 				<footer enable="false" generatedate="false">
 					<data value="null" />
@@ -1678,7 +2001,7 @@ order by object_owner, object_name, object_type, subobject_name
 				<pagesetup papersize="LETTER" orientation="1" measurement="in" margintop="1.0" marginbottom="1.0" marginleft="1.0" marginright="1.0" />
 			</pdf>
 	</display>
-	<display id="null" type="" style="Table" enable="true">
+	<display id="" type="" style="Table" enable="true">
 		<name><![CDATA[tables_stats_cols]]></name>
 		<description><![CDATA[]]></description>
 		<tooltip><![CDATA[]]></tooltip>
@@ -1812,7 +2135,26 @@ order by tcs.owner,tcs.table_name,tcs.column_name]]></sql>
 					
 					
 					
-					null																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																												</data>
+					
+					
+					
+					
+					
+					
+					
+					
+					
+					
+					
+					
+					
+					
+					
+					
+					
+					
+					
+					null																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																											</data>
 				</header>
 				<footer enable="false" generatedate="false">
 					<data value="null" />
@@ -1820,7 +2162,7 @@ order by tcs.owner,tcs.table_name,tcs.column_name]]></sql>
 				<pagesetup papersize="LETTER" orientation="1" measurement="in" margintop="1.0" marginbottom="1.0" marginleft="1.0" marginright="1.0" />
 			</pdf>
 	</display>
-	<display id="null" type="" style="Table" enable="true">
+	<display id="" type="" style="Table" enable="true">
 		<name><![CDATA[indexes]]></name>
 		<description><![CDATA[]]></description>
 		<tooltip><![CDATA[]]></tooltip>
@@ -1954,7 +2296,26 @@ order by p.position,i.table_owner,i.table_name,i.index_name,c.column_position,c.
 					
 					
 					
-					null																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																								</data>
+					
+					
+					
+					
+					
+					
+					
+					
+					
+					
+					
+					
+					
+					
+					
+					
+					
+					
+					
+					null																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																							</data>
 				</header>
 				<footer enable="false" generatedate="false">
 					<data value="null" />
@@ -1962,7 +2323,7 @@ order by p.position,i.table_owner,i.table_name,i.index_name,c.column_position,c.
 				<pagesetup papersize="LETTER" orientation="1" measurement="in" margintop="1.0" marginbottom="1.0" marginleft="1.0" marginright="1.0" />
 			</pdf>
 	</display>
-	<display id="null" type="" style="Table" enable="true">
+	<display id="" type="" style="Table" enable="true">
 		<name><![CDATA[stats_history]]></name>
 		<description><![CDATA[]]></description>
 		<tooltip><![CDATA[]]></tooltip>
@@ -2081,7 +2442,26 @@ order by hsp.object_owner,hsp.object_name,savtime]]></sql>
 					
 					
 					
-					null																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																			</data>
+					
+					
+					
+					
+					
+					
+					
+					
+					
+					
+					
+					
+					
+					
+					
+					
+					
+					
+					
+					null																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																		</data>
 				</header>
 				<footer enable="false" generatedate="false">
 					<data value="null" />
@@ -2089,7 +2469,7 @@ order by hsp.object_owner,hsp.object_name,savtime]]></sql>
 				<pagesetup papersize="LETTER" orientation="1" measurement="in" margintop="1.0" marginbottom="1.0" marginleft="1.0" marginright="1.0" />
 			</pdf>
 	</display>
-	<display id="null" type="" style="Script" enable="true">
+	<display id="" type="" style="Script" enable="true">
 		<name><![CDATA[awr reports]]></name>
 		<description><![CDATA[]]></description>
 		<tooltip><![CDATA[]]></tooltip>
@@ -2119,6 +2499,44 @@ spool off
 set termout on heading on
 select	'F:\work\temp\awr_sql_report.html'  as "AWR Report" from dual;
 select	'F:\work\temp\ash_sql_report.html'  as "ASH Report" from dual;]]></sql>
+			<binds>
+				<bind id="DBID">
+					<prompt><![CDATA[DBID]]></prompt>
+					<tooltip><![CDATA[DBID]]></tooltip>
+					<value><![CDATA[NULL_VALUE]]></value>
+					<bracket><![CDATA[null]]></bracket>
+				</bind>
+				<bind id="INSTANCE_NUMBER">
+					<prompt><![CDATA[INSTANCE_NUMBER]]></prompt>
+					<tooltip><![CDATA[INSTANCE_NUMBER]]></tooltip>
+					<value><![CDATA[NULL_VALUE]]></value>
+					<bracket><![CDATA[null]]></bracket>
+				</bind>
+				<bind id="SNAP_ID">
+					<prompt><![CDATA[SNAP_ID]]></prompt>
+					<tooltip><![CDATA[SNAP_ID]]></tooltip>
+					<value><![CDATA[NULL_VALUE]]></value>
+					<bracket><![CDATA[null]]></bracket>
+				</bind>
+				<bind id="SQL_ID">
+					<prompt><![CDATA[SQL_ID]]></prompt>
+					<tooltip><![CDATA[SQL_ID]]></tooltip>
+					<value><![CDATA[NULL_VALUE]]></value>
+					<bracket><![CDATA[null]]></bracket>
+				</bind>
+				<bind id="BEGIN_INTERVAL_TIME">
+					<prompt><![CDATA[BEGIN_INTERVAL_TIME]]></prompt>
+					<tooltip><![CDATA[BEGIN_INTERVAL_TIME]]></tooltip>
+					<value><![CDATA[NULL_VALUE]]></value>
+					<bracket><![CDATA[null]]></bracket>
+				</bind>
+				<bind id="END_INTERVAL_TIME">
+					<prompt><![CDATA[END_INTERVAL_TIME]]></prompt>
+					<tooltip><![CDATA[END_INTERVAL_TIME]]></tooltip>
+					<value><![CDATA[NULL_VALUE]]></value>
+					<bracket><![CDATA[null]]></bracket>
+				</bind>
+			</binds>
 		</query>
 			<pdf version="VERSION_1_7" compression="CONTENT">
 				<docproperty title="" author="" subject="" keywords="" />
@@ -2188,7 +2606,26 @@ select	'F:\work\temp\ash_sql_report.html'  as "ASH Report" from dual;]]></sql>
 					
 					
 					
-					null																																																																																																																																																																																																																																																																																																		</data>
+					
+					
+					
+					
+					
+					
+					
+					
+					
+					
+					
+					
+					
+					
+					
+					
+					
+					
+					
+					null																																																																																																																																																																																																																																																																																																																																																																																																	</data>
 				</header>
 				<footer enable="false" generatedate="false">
 					<data value="null" />
@@ -2196,7 +2633,7 @@ select	'F:\work\temp\ash_sql_report.html'  as "ASH Report" from dual;]]></sql>
 				<pagesetup papersize="LETTER" orientation="1" measurement="in" margintop="1.0" marginbottom="1.0" marginleft="1.0" marginright="1.0" />
 			</pdf>
 	</display>
-	<display id="null" type="" style="Table" enable="true">
+	<display id="" type="" style="Table" enable="true">
 		<name><![CDATA[sqlt]]></name>
 		<description><![CDATA[]]></description>
 		<tooltip><![CDATA[]]></tooltip>
@@ -2278,7 +2715,26 @@ select 'XPLAIN' method, 'echo exit | sqlplus / as sysdba @/oraback/tfa/tfa_home/
 					
 					
 					
-					null																																																																																																																																																																																																																																																																																																		</data>
+					
+					
+					
+					
+					
+					
+					
+					
+					
+					
+					
+					
+					
+					
+					
+					
+					
+					
+					
+					null																																																																																																																																																																																																																																																																																																																																																																																																	</data>
 				</header>
 				<footer enable="false" generatedate="false">
 					<data value="null" />
