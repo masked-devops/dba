@@ -24,6 +24,7 @@
 		<Y1AXIS_SCALE_MAXIMUM><![CDATA[180.0]]></Y1AXIS_SCALE_MAXIMUM>
 		<XAXIS_TITLE_ALIGNMENT><![CDATA[CENTER]]></XAXIS_TITLE_ALIGNMENT>
 		<Y1AXIS_SCALE_INCREMENT_AUTOMATIC><![CDATA[false]]></Y1AXIS_SCALE_INCREMENT_AUTOMATIC>
+		<PLOT_DATALABELS><![CDATA[false]]></PLOT_DATALABELS>
 		<XAXIS_LOGARITHMIC_BASE><![CDATA[BASE_10]]></XAXIS_LOGARITHMIC_BASE>
 		<XAXIS_TICK_LABEL_ROTATE><![CDATA[HORIZONTAL]]></XAXIS_TICK_LABEL_ROTATE>
 		<Y1AXIS_LOGARITHMIC_BASE><![CDATA[BASE_10]]></Y1AXIS_LOGARITHMIC_BASE>
@@ -56,10 +57,13 @@
 		<sql><![CDATA[-- -----------------------------------------------------------------------------
 -- Author      : Masked DevOps
 -- Date        : Jan 2012
--- Version     : 0.1
+-- Version     : 0.2
 -- -----------------------------------------------------------------------------
 with
-     parms as ( select nvl(to_date(:p_start_date,'yyyy-mm-dd hh24:mi'),trunc(sysdate-23/24,'hh')) start_date ,nvl(to_date(:p_end_date,'yyyy-mm-dd hh24:mi'),trunc(sysdate,'mi')) end_date,nvl(to_number(:p_interval),15) inter,:p_dim dim,:P_INST_ID instance_number,:P_SESSION_SID session_id, :P_SESSION_SERIAL# session_serial#,:P_SQL_ID sql_id,:P_SESSION_TYPE session_type, to_number(:P_USER_ID) user_id,:P_MODULE module, :P_PROGRAM program, :P_MACHINE machine, :P_WAIT_CLASS wait_class, (case when nvl(to_date(:p_start_date,'yyyy-mm-dd hh24:mi'),trunc(sysdate-23/24,'hh')) < sysdate-1 then 10  else 1 end) sample_source from dual)
+     parms as ( select nvl(to_date(:p_start_date,'yyyy-mm-dd hh24:mi'),trunc(sysdate-23/24,'hh')) start_date ,nvl(to_date(:p_end_date,'yyyy-mm-dd hh24:mi'),trunc(sysdate,'mi')) end_date,nvl(to_number(:p_interval),15) inter
+                , :p_dim dim,:P_INST_ID instance_number,:P_SESSION_SID session_id, :P_SESSION_SERIAL# session_serial#,:P_SQL_ID sql_id,:P_SESSION_TYPE session_type, to_number(:P_USER_ID) user_id,:P_MODULE module, :P_PROGRAM program
+                , :P_MACHINE machine, :P_WAIT_CLASS wait_class, (case when nvl(to_date(:p_start_date,'yyyy-mm-dd hh24:mi'),trunc(sysdate-23/24,'hh')) < sysdate-1 or lower(:P_DBA_HIST_ONLY) = 'yes' then 10  else 1 end) sample_source 
+                from dual)
     ,slots as ( select (start_date+(level-1)/24/60/60*inter) as slot from parms connect by (level-1) <= (end_date - start_date)*24*60*60/inter)
     ,snaps as ( select snaps.dbid,snaps.instance_number,snaps.snap_id from dba_hist_snapshot snaps cross join parms where not (snaps.begin_interval_time > parms.end_date or snaps.end_interval_time < parms.start_date) and snaps.instance_number = nvl(parms.instance_number, snaps.instance_number))
     ,ash as    (select ash.snap_id ,ash.dbid ,ash.instance_number ,sample_id ,sample_time ,session_id ,session_serial# ,session_type ,flags ,user_id ,sql_id ,is_sqlid_current ,sql_child_number ,sql_opcode ,sql_opname ,force_matching_signature ,top_level_sql_id ,top_level_sql_opcode ,sql_plan_hash_value ,sql_plan_line_id ,sql_plan_operation ,sql_plan_options ,sql_exec_id ,sql_exec_start ,plsql_entry_object_id ,plsql_entry_subprogram_id ,plsql_object_id ,plsql_subprogram_id ,qc_instance_id ,qc_session_id ,qc_session_serial# ,px_flags ,event ,event_id ,seq# ,p1text ,p1 ,p2text ,p2 ,p3text ,p3 ,wait_class ,wait_class_id ,wait_time ,session_state ,time_waited ,blocking_session_status ,blocking_session ,blocking_session_serial# ,blocking_inst_id ,blocking_hangchain_info ,current_obj# ,current_file# ,current_block# ,current_row# ,top_level_call# ,top_level_call_name ,consumer_group_id ,xid ,remote_instance# ,time_model ,in_connection_mgmt ,in_parse ,in_hard_parse ,in_sql_execution ,in_plsql_execution ,in_plsql_rpc ,in_plsql_compilation ,in_java_execution ,in_bind ,in_cursor_close ,in_sequence_load ,capture_overhead ,replay_overhead ,is_captured ,is_replayed ,service_hash ,program ,module ,action ,client_id ,machine ,port ,ecid ,dbreplay_file_id ,dbreplay_call_counter ,tm_delta_time ,tm_delta_cpu_time ,tm_delta_db_time ,delta_time ,delta_read_io_requests ,delta_write_io_requests ,delta_read_io_bytes ,delta_write_io_bytes ,delta_interconnect_io_bytes ,pga_allocated ,temp_space_allocated  from dba_hist_active_sess_history ash,(select cast(start_date as timestamp) start_date, cast(end_date as timestamp) end_date, sample_source from parms) p, snaps where p.sample_source=10 and snaps.dbid = ash.dbid and snaps.instance_number = ash.instance_number and snaps.snap_id = ash.snap_id and sample_time >= start_date and sample_time <= end_date union all
@@ -99,7 +103,7 @@ with
                     and ((parms.wait_class   is not null and parms.wait_class   = ash.wait_class  )  or  parms.wait_class  is null)
 
         )
-select
+select /*+ NO_PARALLEL */
      to_char(slots.slot,'yyyy-mm-dd hh24:mi:ss') slot
     ,hist.dim
     ,count(hist.dim)*sample_source/inter active_sessions
@@ -111,19 +115,19 @@ order by slots.slot,hist.dim]]></sql>
 			<bind id="p_start_date">
 				<prompt><![CDATA[start_date]]></prompt>
 				<tooltip><![CDATA[yyyy-mm-dd hh24:mi]]></tooltip>
-				<value><![CDATA[2019-10-11 ]]></value>
+				<value><![CDATA[2021-04-21 11:00]]></value>
 				<bracket><![CDATA[null]]></bracket>
 			</bind>
 			<bind id="p_end_date">
 				<prompt><![CDATA[end_date]]></prompt>
 				<tooltip><![CDATA[yyyy-mm-dd hh24:mi]]></tooltip>
-				<value><![CDATA[NULL_VALUE]]></value>
+				<value><![CDATA[2021-04-21 13:00]]></value>
 				<bracket><![CDATA[null]]></bracket>
 			</bind>
 			<bind id="p_interval">
 				<prompt><![CDATA[interval in seconds]]></prompt>
-				<tooltip><![CDATA[time slot in seconds]]></tooltip>
-				<value><![CDATA[600]]></value>
+				<tooltip><![CDATA[time slot in seconds, histogram width]]></tooltip>
+				<value><![CDATA[60]]></value>
 				<bracket><![CDATA[null]]></bracket>
 			</bind>
 			<bind id="p_dim">
@@ -134,49 +138,49 @@ order by slots.slot,hist.dim]]></sql>
 			</bind>
 			<bind id="P_INST_ID">
 				<prompt><![CDATA[INST_ID]]></prompt>
-				<tooltip><![CDATA[INSTANCE NUMBER]]></tooltip>
+				<tooltip><![CDATA[GV$SESSION.inst_id]]></tooltip>
 				<value><![CDATA[NULL_VALUE]]></value>
 				<bracket><![CDATA[null]]></bracket>
 			</bind>
 			<bind id="P_SESSION_SID">
 				<prompt><![CDATA[SESSION_SID]]></prompt>
-				<tooltip><![CDATA[SESSION_SID]]></tooltip>
+				<tooltip><![CDATA[V$SESSION.sid]]></tooltip>
 				<value><![CDATA[NULL_VALUE]]></value>
 				<bracket><![CDATA[null]]></bracket>
 			</bind>
 			<bind id="P_SESSION_SERIAL#">
 				<prompt><![CDATA[SESSION_SERIAL#]]></prompt>
-				<tooltip><![CDATA[SESSION_SERIAL#]]></tooltip>
+				<tooltip><![CDATA[V$SESSION.serial#]]></tooltip>
 				<value><![CDATA[NULL_VALUE]]></value>
 				<bracket><![CDATA[null]]></bracket>
 			</bind>
 			<bind id="P_SQL_ID">
 				<prompt><![CDATA[SQL_ID]]></prompt>
-				<tooltip><![CDATA[SQL_ID]]></tooltip>
+				<tooltip><![CDATA[V$SESSION.sql_id]]></tooltip>
 				<value><![CDATA[NULL_VALUE]]></value>
 				<bracket><![CDATA[null]]></bracket>
 			</bind>
 			<bind id="P_SESSION_TYPE">
 				<prompt><![CDATA[SESSION_TYPE]]></prompt>
-				<tooltip><![CDATA[FOREGROUND/BACKGROUND]]></tooltip>
+				<tooltip><![CDATA[FOREGROUND/BACKGROUND  default=both]]></tooltip>
 				<value><![CDATA[NULL_VALUE]]></value>
 				<bracket><![CDATA[null]]></bracket>
 			</bind>
 			<bind id="P_USER_ID">
 				<prompt><![CDATA[USER_ID]]></prompt>
-				<tooltip><![CDATA[USER_ID]]></tooltip>
+				<tooltip><![CDATA[V$SESSION.user#]]></tooltip>
 				<value><![CDATA[NULL_VALUE]]></value>
 				<bracket><![CDATA[null]]></bracket>
 			</bind>
 			<bind id="P_MODULE">
 				<prompt><![CDATA[MODULE]]></prompt>
-				<tooltip><![CDATA[MODULE]]></tooltip>
+				<tooltip><![CDATA[V$SESSION.module]]></tooltip>
 				<value><![CDATA[NULL_VALUE]]></value>
 				<bracket><![CDATA[null]]></bracket>
 			</bind>
 			<bind id="P_PROGRAM">
 				<prompt><![CDATA[PROGRAM]]></prompt>
-				<tooltip><![CDATA[PROGRAM]]></tooltip>
+				<tooltip><![CDATA[V$SESSION.program]]></tooltip>
 				<value><![CDATA[NULL_VALUE]]></value>
 				<bracket><![CDATA[null]]></bracket>
 			</bind>
@@ -187,8 +191,14 @@ order by slots.slot,hist.dim]]></sql>
 				<bracket><![CDATA[null]]></bracket>
 			</bind>
 			<bind id="P_WAIT_CLASS">
-				<prompt><![CDATA[P_WAIT_CLASS]]></prompt>
-				<tooltip><![CDATA[P_WAIT_CLASS]]></tooltip>
+				<prompt><![CDATA[WAIT_CLASS]]></prompt>
+				<tooltip><![CDATA[Administrative/Application/Cluster/Commit/Concurrency ...]]></tooltip>
+				<value><![CDATA[NULL_VALUE]]></value>
+				<bracket><![CDATA[null]]></bracket>
+			</bind>
+			<bind id="P_DBA_HIST_ONLY">
+				<prompt><![CDATA[DBA_HIST_ONLY]]></prompt>
+				<tooltip><![CDATA[yes/no  null=no, yes=only data from dba_hist_active_sess_history]]></tooltip>
 				<value><![CDATA[NULL_VALUE]]></value>
 				<bracket><![CDATA[null]]></bracket>
 			</bind>
@@ -248,26 +258,6 @@ order by slots.slot,hist.dim]]></sql>
 				
 				
 				
-					
-				
-				
-				
-				
-				
-				
-				
-				
-				
-				
-				
-				
-				
-				
-				
-				
-				
-				
-				
 				
 				
 				
@@ -288,13 +278,52 @@ order by slots.slot,hist.dim]]></sql>
 				
 				
 					
+				
+				
+				
+				
+				
+				
+				
+				
+				
+				
+				
+				
+				
+				
+				
+				
+				
+				
+				
+				
+				
+				
+				
+				
+				
+				
+				
+				
+				
+				
+				
+				
+				
+				
+				
+				
+				
+				
 					
 					
 					
 					
 					
 					
-				null																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																												</data>
+					
+				null																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																								</data>
 			</header>
 			<footer enable="false" generatedate="false">
 				<data value="null" />
@@ -311,10 +340,13 @@ order by slots.slot,hist.dim]]></sql>
 		</CustomValues>
 		<query>
 			<sql><![CDATA[with
-     parms as ( select nvl(to_date(:p_start_date,'yyyy-mm-dd hh24:mi'),trunc(sysdate-23/24,'hh')) start_date ,nvl(to_date(:p_end_date,'yyyy-mm-dd hh24:mi'),trunc(sysdate,'mi')) end_date,nvl(to_number(:p_interval),15) inter,:p_dim dim,:P_INST_ID instance_number,:P_SESSION_SID session_id, :P_SESSION_SERIAL# session_serial#,:P_SQL_ID sql_id,:P_SESSION_TYPE session_type, to_number(:P_USER_ID) user_id,:P_MODULE module, :P_PROGRAM program, :P_MACHINE machine, :P_WAIT_CLASS wait_class, (case when nvl(to_date(:p_start_date,'yyyy-mm-dd hh24:mi'),trunc(sysdate-23/24,'hh')) < sysdate-1 then 10  else 1 end) sample_source from dual)
+     parms as ( select nvl(to_date(:p_start_date,'yyyy-mm-dd hh24:mi'),trunc(sysdate-23/24,'hh')) start_date ,nvl(to_date(:p_end_date,'yyyy-mm-dd hh24:mi'),trunc(sysdate,'mi')) end_date,nvl(to_number(:p_interval),15) inter
+                , :p_dim dim,:P_INST_ID instance_number,:P_SESSION_SID session_id, :P_SESSION_SERIAL# session_serial#,:P_SQL_ID sql_id,:P_SESSION_TYPE session_type, to_number(:P_USER_ID) user_id,:P_MODULE module, :P_PROGRAM program
+                , :P_MACHINE machine, :P_WAIT_CLASS wait_class, (case when nvl(to_date(:p_start_date,'yyyy-mm-dd hh24:mi'),trunc(sysdate-23/24,'hh')) < sysdate-1 or lower(:P_DBA_HIST_ONLY) = 'yes' then 10  else 1 end) sample_source 
+                from dual)
 	,slots as ( select (start_date+(level-1)/24/60/60*inter) as slot from parms connect by (level-1) <= (end_date - start_date)*24*60*60/inter)
 	,snaps as ( select snaps.dbid,snaps.instance_number,snaps.snap_id from dba_hist_snapshot snaps cross join parms where not (snaps.begin_interval_time > parms.end_date or snaps.end_interval_time < parms.start_date) and snaps.instance_number = nvl(parms.instance_number, snaps.instance_number))
-	,ash   as (select /*+ materialize */ 
+	,ash   as (select /*+ materialize NO_PARALLEL */ 
                      ash.*
                     ,parms.inter 
                     ,count(*)                       over ()  cnt_tot
@@ -340,7 +372,106 @@ select 'module                  ',parms.module                                  
 select 'program                 ',parms.program                                                               ,'----','                           '          ,null                            from parms union all    
 select 'machine                 ',parms.machine                                                               ,'----','                           '          ,null                            from parms union all    
 select 'wait_class              ',parms.wait_class                                                            ,'----','                           '          ,null                            from parms union all    
+select 'source                  ',to_char(parms.sample_source)                                                ,'----','                           '          ,null                            from parms union all    
 select '----','----','----','----','----' from dual]]></sql>
+			<binds>
+				<bind id="p_start_date">
+					<prompt><![CDATA[p_start_date]]></prompt>
+					<tooltip><![CDATA[p_start_date]]></tooltip>
+					<value><![CDATA[NULL_VALUE]]></value>
+					<bracket><![CDATA[null]]></bracket>
+				</bind>
+				<bind id="p_end_date">
+					<prompt><![CDATA[p_end_date]]></prompt>
+					<tooltip><![CDATA[p_end_date]]></tooltip>
+					<value><![CDATA[NULL_VALUE]]></value>
+					<bracket><![CDATA[null]]></bracket>
+				</bind>
+				<bind id="p_interval">
+					<prompt><![CDATA[p_interval]]></prompt>
+					<tooltip><![CDATA[p_interval]]></tooltip>
+					<value><![CDATA[NULL_VALUE]]></value>
+					<bracket><![CDATA[null]]></bracket>
+				</bind>
+				<bind id="p_dim">
+					<prompt><![CDATA[p_dim]]></prompt>
+					<tooltip><![CDATA[p_dim]]></tooltip>
+					<value><![CDATA[NULL_VALUE]]></value>
+					<bracket><![CDATA[null]]></bracket>
+				</bind>
+				<bind id="P_INST_ID">
+					<prompt><![CDATA[P_INST_ID]]></prompt>
+					<tooltip><![CDATA[P_INST_ID]]></tooltip>
+					<value><![CDATA[NULL_VALUE]]></value>
+					<bracket><![CDATA[null]]></bracket>
+				</bind>
+				<bind id="P_SESSION_SID">
+					<prompt><![CDATA[P_SESSION_SID]]></prompt>
+					<tooltip><![CDATA[P_SESSION_SID]]></tooltip>
+					<value><![CDATA[NULL_VALUE]]></value>
+					<bracket><![CDATA[null]]></bracket>
+				</bind>
+				<bind id="P_SESSION_SERIAL#">
+					<prompt><![CDATA[P_SESSION_SERIAL#]]></prompt>
+					<tooltip><![CDATA[P_SESSION_SERIAL#]]></tooltip>
+					<value><![CDATA[NULL_VALUE]]></value>
+					<bracket><![CDATA[null]]></bracket>
+				</bind>
+				<bind id="P_SQL_ID">
+					<prompt><![CDATA[P_SQL_ID]]></prompt>
+					<tooltip><![CDATA[P_SQL_ID]]></tooltip>
+					<value><![CDATA[NULL_VALUE]]></value>
+					<bracket><![CDATA[null]]></bracket>
+				</bind>
+				<bind id="P_SESSION_TYPE">
+					<prompt><![CDATA[P_SESSION_TYPE]]></prompt>
+					<tooltip><![CDATA[P_SESSION_TYPE]]></tooltip>
+					<value><![CDATA[NULL_VALUE]]></value>
+					<bracket><![CDATA[null]]></bracket>
+				</bind>
+				<bind id="P_USER_ID">
+					<prompt><![CDATA[P_USER_ID]]></prompt>
+					<tooltip><![CDATA[P_USER_ID]]></tooltip>
+					<value><![CDATA[NULL_VALUE]]></value>
+					<bracket><![CDATA[null]]></bracket>
+				</bind>
+				<bind id="P_MODULE">
+					<prompt><![CDATA[P_MODULE]]></prompt>
+					<tooltip><![CDATA[P_MODULE]]></tooltip>
+					<value><![CDATA[NULL_VALUE]]></value>
+					<bracket><![CDATA[null]]></bracket>
+				</bind>
+				<bind id="P_PROGRAM">
+					<prompt><![CDATA[P_PROGRAM]]></prompt>
+					<tooltip><![CDATA[P_PROGRAM]]></tooltip>
+					<value><![CDATA[NULL_VALUE]]></value>
+					<bracket><![CDATA[null]]></bracket>
+				</bind>
+				<bind id="P_MACHINE">
+					<prompt><![CDATA[P_MACHINE]]></prompt>
+					<tooltip><![CDATA[P_MACHINE]]></tooltip>
+					<value><![CDATA[NULL_VALUE]]></value>
+					<bracket><![CDATA[null]]></bracket>
+				</bind>
+				<bind id="P_WAIT_CLASS">
+					<prompt><![CDATA[P_WAIT_CLASS]]></prompt>
+					<tooltip><![CDATA[P_WAIT_CLASS]]></tooltip>
+					<value><![CDATA[NULL_VALUE]]></value>
+					<bracket><![CDATA[null]]></bracket>
+				</bind>
+				<bind id="P_DBA_HIST_ONLY">
+					<prompt><![CDATA[P_DBA_HIST_ONLY]]></prompt>
+					<tooltip><![CDATA[P_DBA_HIST_ONLY]]></tooltip>
+					<value><![CDATA[NULL_VALUE]]></value>
+					<bracket><![CDATA[null]]></bracket>
+				</bind>
+				<bind id="SLOT">
+					<prompt><![CDATA[SLOT]]></prompt>
+					<tooltip><![CDATA[SLOT]]></tooltip>
+					<value><![CDATA[NULL_VALUE]]></value>
+					<bracket><![CDATA[null]]></bracket>
+				</bind>
+			</binds>
 		</query>
 			<pdf version="VERSION_1_7" compression="CONTENT">
 				<docproperty title="" author="" subject="" keywords="" />
@@ -396,26 +527,6 @@ select '----','----','----','----','----' from dual]]></sql>
 					
 					
 					
-						
-					
-					
-					
-					
-					
-					
-					
-					
-					
-					
-					
-					
-					
-					
-					
-					
-					
-					
-					
 					
 					
 					
@@ -436,13 +547,52 @@ select '----','----','----','----','----' from dual]]></sql>
 					
 					
 						
+					
+					
+					
+					
+					
+					
+					
+					
+					
+					
+					
+					
+					
+					
+					
+					
+					
+					
+					
+					
+					
+					
+					
+					
+					
+					
+					
+					
+					
+					
+					
+					
+					
+					
+					
+					
+					
+					
 						
 						
 						
 						
 						
 						
-					null																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																												</data>
+						
+					null																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																											</data>
 				</header>
 				<footer enable="false" generatedate="false">
 					<data value="null" />
@@ -465,7 +615,7 @@ select '----','----','----','----','----' from dual]]></sql>
 	,snaps as ( select snaps.dbid,snaps.instance_number,snaps.snap_id from dba_hist_snapshot snaps cross join parms where not (snaps.begin_interval_time > parms.end_date or snaps.end_interval_time < parms.start_date) and snaps.instance_number = nvl(parms.instance_number, snaps.instance_number))
     ,ash   as ( select ash.snap_id ,ash.dbid ,ash.instance_number ,sample_id ,sample_time ,session_id ,session_serial# ,session_type ,flags ,user_id ,sql_id ,is_sqlid_current ,sql_child_number ,sql_opcode ,sql_opname ,force_matching_signature ,top_level_sql_id ,top_level_sql_opcode ,sql_plan_hash_value ,sql_plan_line_id ,sql_plan_operation ,sql_plan_options ,sql_exec_id ,sql_exec_start ,plsql_entry_object_id ,plsql_entry_subprogram_id ,plsql_object_id ,plsql_subprogram_id ,qc_instance_id ,qc_session_id ,qc_session_serial# ,px_flags ,event ,event_id ,seq# ,p1text ,p1 ,p2text ,p2 ,p3text ,p3 ,wait_class ,wait_class_id ,wait_time ,session_state ,time_waited ,blocking_session_status ,blocking_session ,blocking_session_serial# ,blocking_inst_id ,blocking_hangchain_info ,current_obj# ,current_file# ,current_block# ,current_row# ,top_level_call# ,top_level_call_name ,consumer_group_id ,xid ,remote_instance# ,time_model ,in_connection_mgmt ,in_parse ,in_hard_parse ,in_sql_execution ,in_plsql_execution ,in_plsql_rpc ,in_plsql_compilation ,in_java_execution ,in_bind ,in_cursor_close ,in_sequence_load ,capture_overhead ,replay_overhead ,is_captured ,is_replayed ,service_hash ,program ,module ,action ,client_id ,machine ,port ,ecid ,dbreplay_file_id ,dbreplay_call_counter ,tm_delta_time ,tm_delta_cpu_time ,tm_delta_db_time ,delta_time ,delta_read_io_requests ,delta_write_io_requests ,delta_read_io_bytes ,delta_write_io_bytes ,delta_interconnect_io_bytes ,pga_allocated ,temp_space_allocated  from dba_hist_active_sess_history ash,(select start_date, end_date, inter, sample_source from parms) p, snaps where snaps.dbid = ash.dbid and snaps.instance_number = ash.instance_number and snaps.snap_id = ash.snap_id and sample_time - mod((cast(sample_time as date) - start_date)*24*60*60,inter)/24/60/60 = case when p.sample_source = 10 then :SLOT else null end union all
                 select 0           ,null     ,inst_id             ,sample_id ,sample_time ,session_id ,session_serial# ,session_type ,flags ,user_id ,sql_id ,is_sqlid_current ,sql_child_number ,sql_opcode ,sql_opname ,force_matching_signature ,top_level_sql_id ,top_level_sql_opcode ,sql_plan_hash_value ,sql_plan_line_id ,sql_plan_operation ,sql_plan_options ,sql_exec_id ,sql_exec_start ,plsql_entry_object_id ,plsql_entry_subprogram_id ,plsql_object_id ,plsql_subprogram_id ,qc_instance_id ,qc_session_id ,qc_session_serial# ,px_flags ,event ,event_id ,seq# ,p1text ,p1 ,p2text ,p2 ,p3text ,p3 ,wait_class ,wait_class_id ,wait_time ,session_state ,time_waited ,blocking_session_status ,blocking_session ,blocking_session_serial# ,blocking_inst_id ,blocking_hangchain_info ,current_obj# ,current_file# ,current_block# ,current_row# ,top_level_call# ,top_level_call_name ,consumer_group_id ,xid ,remote_instance# ,time_model ,in_connection_mgmt ,in_parse ,in_hard_parse ,in_sql_execution ,in_plsql_execution ,in_plsql_rpc ,in_plsql_compilation ,in_java_execution ,in_bind ,in_cursor_close ,in_sequence_load ,capture_overhead ,replay_overhead ,is_captured ,is_replayed ,service_hash ,program ,module ,action ,client_id ,machine ,port ,ecid ,dbreplay_file_id ,dbreplay_call_counter ,tm_delta_time ,tm_delta_cpu_time ,tm_delta_db_time ,delta_time ,delta_read_io_requests ,delta_write_io_requests ,delta_read_io_bytes ,delta_write_io_bytes ,delta_interconnect_io_bytes ,pga_allocated ,temp_space_allocated  from gv$active_session_history    ash,(select start_date, end_date, inter, sample_source from parms) p        where                                                                                                           sample_time - mod((cast(sample_time as date) - start_date)*24*60*60,inter)/24/60/60 = case when p.sample_source = 1  then :SLOT else null end)
-select distinct
+select /*+ NO_PARALLEL */ distinct
 	 :DIM dim
 	,ash.event
 	,round(sum(ash.time_waited)  over (partition by :DIM,ash.event)/1000)   total_wait_time_ms 
@@ -562,26 +712,6 @@ order by cnt_event desc]]></sql>
 					
 					
 					
-						
-					
-					
-					
-					
-					
-					
-					
-					
-					
-					
-					
-					
-					
-					
-					
-					
-					
-					
-					
 					
 					
 					
@@ -602,13 +732,52 @@ order by cnt_event desc]]></sql>
 					
 					
 						
+					
+					
+					
+					
+					
+					
+					
+					
+					
+					
+					
+					
+					
+					
+					
+					
+					
+					
+					
+					
+					
+					
+					
+					
+					
+					
+					
+					
+					
+					
+					
+					
+					
+					
+					
+					
+					
+					
 						
 						
 						
 						
 						
 						
-					null																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																													</data>
+						
+					null																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																												</data>
 				</header>
 				<footer enable="false" generatedate="false">
 					<data value="null" />
@@ -631,7 +800,7 @@ order by cnt_event desc]]></sql>
 	,snaps as ( select snaps.dbid,snaps.instance_number,snaps.snap_id from dba_hist_snapshot snaps cross join parms where not (snaps.begin_interval_time > parms.end_date or snaps.end_interval_time < parms.start_date) and snaps.instance_number = nvl(parms.instance_number, snaps.instance_number))
     ,ash   as ( select ash.snap_id ,ash.dbid ,ash.instance_number ,sample_id ,sample_time ,session_id ,session_serial# ,session_type ,flags ,user_id ,sql_id ,is_sqlid_current ,sql_child_number ,sql_opcode ,sql_opname ,force_matching_signature ,top_level_sql_id ,top_level_sql_opcode ,sql_plan_hash_value ,sql_plan_line_id ,sql_plan_operation ,sql_plan_options ,sql_exec_id ,sql_exec_start ,plsql_entry_object_id ,plsql_entry_subprogram_id ,plsql_object_id ,plsql_subprogram_id ,qc_instance_id ,qc_session_id ,qc_session_serial# ,px_flags ,event ,event_id ,seq# ,p1text ,p1 ,p2text ,p2 ,p3text ,p3 ,wait_class ,wait_class_id ,wait_time ,session_state ,time_waited ,blocking_session_status ,blocking_session ,blocking_session_serial# ,blocking_inst_id ,blocking_hangchain_info ,current_obj# ,current_file# ,current_block# ,current_row# ,top_level_call# ,top_level_call_name ,consumer_group_id ,xid ,remote_instance# ,time_model ,in_connection_mgmt ,in_parse ,in_hard_parse ,in_sql_execution ,in_plsql_execution ,in_plsql_rpc ,in_plsql_compilation ,in_java_execution ,in_bind ,in_cursor_close ,in_sequence_load ,capture_overhead ,replay_overhead ,is_captured ,is_replayed ,service_hash ,program ,module ,action ,client_id ,machine ,port ,ecid ,dbreplay_file_id ,dbreplay_call_counter ,tm_delta_time ,tm_delta_cpu_time ,tm_delta_db_time ,delta_time ,delta_read_io_requests ,delta_write_io_requests ,delta_read_io_bytes ,delta_write_io_bytes ,delta_interconnect_io_bytes ,pga_allocated ,temp_space_allocated  from dba_hist_active_sess_history ash,(select start_date, end_date, inter, sample_source from parms) p, snaps where snaps.dbid = ash.dbid and snaps.instance_number = ash.instance_number and snaps.snap_id = ash.snap_id and sample_time - mod((cast(sample_time as date) - start_date)*24*60*60,inter)/24/60/60 = case when p.sample_source = 10 then :SLOT else null end union all
                 select 0           ,null     ,inst_id             ,sample_id ,sample_time ,session_id ,session_serial# ,session_type ,flags ,user_id ,sql_id ,is_sqlid_current ,sql_child_number ,sql_opcode ,sql_opname ,force_matching_signature ,top_level_sql_id ,top_level_sql_opcode ,sql_plan_hash_value ,sql_plan_line_id ,sql_plan_operation ,sql_plan_options ,sql_exec_id ,sql_exec_start ,plsql_entry_object_id ,plsql_entry_subprogram_id ,plsql_object_id ,plsql_subprogram_id ,qc_instance_id ,qc_session_id ,qc_session_serial# ,px_flags ,event ,event_id ,seq# ,p1text ,p1 ,p2text ,p2 ,p3text ,p3 ,wait_class ,wait_class_id ,wait_time ,session_state ,time_waited ,blocking_session_status ,blocking_session ,blocking_session_serial# ,blocking_inst_id ,blocking_hangchain_info ,current_obj# ,current_file# ,current_block# ,current_row# ,top_level_call# ,top_level_call_name ,consumer_group_id ,xid ,remote_instance# ,time_model ,in_connection_mgmt ,in_parse ,in_hard_parse ,in_sql_execution ,in_plsql_execution ,in_plsql_rpc ,in_plsql_compilation ,in_java_execution ,in_bind ,in_cursor_close ,in_sequence_load ,capture_overhead ,replay_overhead ,is_captured ,is_replayed ,service_hash ,program ,module ,action ,client_id ,machine ,port ,ecid ,dbreplay_file_id ,dbreplay_call_counter ,tm_delta_time ,tm_delta_cpu_time ,tm_delta_db_time ,delta_time ,delta_read_io_requests ,delta_write_io_requests ,delta_read_io_bytes ,delta_write_io_bytes ,delta_interconnect_io_bytes ,pga_allocated ,temp_space_allocated  from gv$active_session_history    ash,(select start_date, end_date, inter, sample_source from parms) p        where                                                                                                           sample_time - mod((cast(sample_time as date) - start_date)*24*60*60,inter)/24/60/60 = case when p.sample_source = 1  then :SLOT else null end)
-select
+select /*+ NO_PARALLEL */
     --ash.sample_id
     to_char(ash.sample_time,'yyyy-mm-dd hh24:mi:ss') sample_time
     --,ash.is_awr_sample
@@ -730,10 +899,11 @@ select
     --,ash.delta_read_io_requests
     --,ash.delta_write_io_requests
     --,ash.delta_read_io_bytes
-    --,ash.delta_write_io_bytes
+    ,ash.delta_write_io_bytes
     --,ash.delta_interconnect_io_bytes
     ,ash.pga_allocated
     ,ash.temp_space_allocated
+    --,nvl((select to_char(sql_fulltext) from gv$sqlstats sqlt where sqlt.sql_id = ash.sql_id and rownum < 2),(select to_char(sql_text) from dba_hist_sqltext hs where hs.sql_id = ash.sql_id and rownum < 2)) sql_fulltext
     ,nvl((select dbms_lob.substr(sql_fulltext,1000) from gv$sqlstats sqlt where sqlt.sql_id = ash.sql_id and rownum < 2),(select dbms_lob.substr(sql_text,1000) from dba_hist_sqltext hs where hs.sql_id = ash.sql_id and rownum < 2)) sql_fulltext
 from ash
 		cross join	parms
@@ -809,26 +979,6 @@ order by sample_time asc]]></sql>
 					
 					
 					
-						
-					
-					
-					
-					
-					
-					
-					
-					
-					
-					
-					
-					
-					
-					
-					
-					
-					
-					
-					
 					
 					
 					
@@ -849,13 +999,52 @@ order by sample_time asc]]></sql>
 					
 					
 						
+					
+					
+					
+					
+					
+					
+					
+					
+					
+					
+					
+					
+					
+					
+					
+					
+					
+					
+					
+					
+					
+					
+					
+					
+					
+					
+					
+					
+					
+					
+					
+					
+					
+					
+					
+					
+					
+					
 						
 						
 						
 						
 						
 						
-					null																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																											</data>
+						
+					null																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																										</data>
 				</header>
 				<footer enable="false" generatedate="false">
 					<data value="null" />
@@ -878,7 +1067,7 @@ order by sample_time asc]]></sql>
 	,snaps as ( select snaps.dbid,snaps.instance_number,snaps.snap_id from dba_hist_snapshot snaps cross join parms where not (snaps.begin_interval_time > parms.end_date or snaps.end_interval_time < parms.start_date) and snaps.instance_number = nvl(parms.instance_number, snaps.instance_number))
     ,ash   as ( select ash.snap_id ,ash.dbid ,ash.instance_number ,sample_id ,sample_time ,session_id ,session_serial# ,session_type ,flags ,user_id ,sql_id ,is_sqlid_current ,sql_child_number ,sql_opcode ,sql_opname ,force_matching_signature ,top_level_sql_id ,top_level_sql_opcode ,sql_plan_hash_value ,sql_plan_line_id ,sql_plan_operation ,sql_plan_options ,sql_exec_id ,sql_exec_start ,plsql_entry_object_id ,plsql_entry_subprogram_id ,plsql_object_id ,plsql_subprogram_id ,qc_instance_id ,qc_session_id ,qc_session_serial# ,px_flags ,event ,event_id ,seq# ,p1text ,p1 ,p2text ,p2 ,p3text ,p3 ,wait_class ,wait_class_id ,wait_time ,session_state ,time_waited ,blocking_session_status ,blocking_session ,blocking_session_serial# ,blocking_inst_id ,blocking_hangchain_info ,current_obj# ,current_file# ,current_block# ,current_row# ,top_level_call# ,top_level_call_name ,consumer_group_id ,xid ,remote_instance# ,time_model ,in_connection_mgmt ,in_parse ,in_hard_parse ,in_sql_execution ,in_plsql_execution ,in_plsql_rpc ,in_plsql_compilation ,in_java_execution ,in_bind ,in_cursor_close ,in_sequence_load ,capture_overhead ,replay_overhead ,is_captured ,is_replayed ,service_hash ,program ,module ,action ,client_id ,machine ,port ,ecid ,dbreplay_file_id ,dbreplay_call_counter ,tm_delta_time ,tm_delta_cpu_time ,tm_delta_db_time ,delta_time ,delta_read_io_requests ,delta_write_io_requests ,delta_read_io_bytes ,delta_write_io_bytes ,delta_interconnect_io_bytes ,pga_allocated ,temp_space_allocated  from dba_hist_active_sess_history ash,(select start_date, end_date, inter, sample_source from parms) p, snaps where snaps.dbid = ash.dbid and snaps.instance_number = ash.instance_number and snaps.snap_id = ash.snap_id and sample_time - mod((cast(sample_time as date) - start_date)*24*60*60,inter)/24/60/60 = case when p.sample_source = 10 then :SLOT else null end union all
                 select 0           ,null     ,inst_id             ,sample_id ,sample_time ,session_id ,session_serial# ,session_type ,flags ,user_id ,sql_id ,is_sqlid_current ,sql_child_number ,sql_opcode ,sql_opname ,force_matching_signature ,top_level_sql_id ,top_level_sql_opcode ,sql_plan_hash_value ,sql_plan_line_id ,sql_plan_operation ,sql_plan_options ,sql_exec_id ,sql_exec_start ,plsql_entry_object_id ,plsql_entry_subprogram_id ,plsql_object_id ,plsql_subprogram_id ,qc_instance_id ,qc_session_id ,qc_session_serial# ,px_flags ,event ,event_id ,seq# ,p1text ,p1 ,p2text ,p2 ,p3text ,p3 ,wait_class ,wait_class_id ,wait_time ,session_state ,time_waited ,blocking_session_status ,blocking_session ,blocking_session_serial# ,blocking_inst_id ,blocking_hangchain_info ,current_obj# ,current_file# ,current_block# ,current_row# ,top_level_call# ,top_level_call_name ,consumer_group_id ,xid ,remote_instance# ,time_model ,in_connection_mgmt ,in_parse ,in_hard_parse ,in_sql_execution ,in_plsql_execution ,in_plsql_rpc ,in_plsql_compilation ,in_java_execution ,in_bind ,in_cursor_close ,in_sequence_load ,capture_overhead ,replay_overhead ,is_captured ,is_replayed ,service_hash ,program ,module ,action ,client_id ,machine ,port ,ecid ,dbreplay_file_id ,dbreplay_call_counter ,tm_delta_time ,tm_delta_cpu_time ,tm_delta_db_time ,delta_time ,delta_read_io_requests ,delta_write_io_requests ,delta_read_io_bytes ,delta_write_io_bytes ,delta_interconnect_io_bytes ,pga_allocated ,temp_space_allocated  from gv$active_session_history    ash,(select start_date, end_date, inter, sample_source from parms) p        where                                                                                                           sample_time - mod((cast(sample_time as date) - start_date)*24*60*60,inter)/24/60/60 = case when p.sample_source = 1  then :SLOT else null end)
-select distinct
+select /*+ NO_PARALLEL */ distinct
 	 ash.session_id       sid
 	,ash.session_serial#  serial#
 	,users.username
@@ -959,26 +1148,6 @@ order by load_pct desc]]></sql>
 					
 					
 					
-						
-					
-					
-					
-					
-					
-					
-					
-					
-					
-					
-					
-					
-					
-					
-					
-					
-					
-					
-					
 					
 					
 					
@@ -999,13 +1168,52 @@ order by load_pct desc]]></sql>
 					
 					
 						
+					
+					
+					
+					
+					
+					
+					
+					
+					
+					
+					
+					
+					
+					
+					
+					
+					
+					
+					
+					
+					
+					
+					
+					
+					
+					
+					
+					
+					
+					
+					
+					
+					
+					
+					
+					
+					
+					
 						
 						
 						
 						
 						
 						
-						null																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																		</data>
+						
+						null																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																	</data>
 				</header>
 				<footer enable="false" generatedate="false">
 					<data value="null" />
@@ -1028,7 +1236,7 @@ order by load_pct desc]]></sql>
 	,snaps as ( select snaps.dbid,snaps.instance_number,snaps.snap_id from dba_hist_snapshot snaps cross join parms where not (snaps.begin_interval_time > parms.end_date or snaps.end_interval_time < parms.start_date) and snaps.instance_number = nvl(parms.instance_number, snaps.instance_number))
     ,ash   as ( select ash.snap_id ,ash.dbid ,ash.instance_number ,sample_id ,sample_time ,session_id ,session_serial# ,session_type ,flags ,user_id ,sql_id ,is_sqlid_current ,sql_child_number ,sql_opcode ,sql_opname ,force_matching_signature ,top_level_sql_id ,top_level_sql_opcode ,sql_plan_hash_value ,sql_plan_line_id ,sql_plan_operation ,sql_plan_options ,sql_exec_id ,sql_exec_start ,plsql_entry_object_id ,plsql_entry_subprogram_id ,plsql_object_id ,plsql_subprogram_id ,qc_instance_id ,qc_session_id ,qc_session_serial# ,px_flags ,event ,event_id ,seq# ,p1text ,p1 ,p2text ,p2 ,p3text ,p3 ,wait_class ,wait_class_id ,wait_time ,session_state ,time_waited ,blocking_session_status ,blocking_session ,blocking_session_serial# ,blocking_inst_id ,blocking_hangchain_info ,current_obj# ,current_file# ,current_block# ,current_row# ,top_level_call# ,top_level_call_name ,consumer_group_id ,xid ,remote_instance# ,time_model ,in_connection_mgmt ,in_parse ,in_hard_parse ,in_sql_execution ,in_plsql_execution ,in_plsql_rpc ,in_plsql_compilation ,in_java_execution ,in_bind ,in_cursor_close ,in_sequence_load ,capture_overhead ,replay_overhead ,is_captured ,is_replayed ,service_hash ,program ,module ,action ,client_id ,machine ,port ,ecid ,dbreplay_file_id ,dbreplay_call_counter ,tm_delta_time ,tm_delta_cpu_time ,tm_delta_db_time ,delta_time ,delta_read_io_requests ,delta_write_io_requests ,delta_read_io_bytes ,delta_write_io_bytes ,delta_interconnect_io_bytes ,pga_allocated ,temp_space_allocated  from dba_hist_active_sess_history ash,(select start_date, end_date, inter, sample_source from parms) p, snaps where snaps.dbid = ash.dbid and snaps.instance_number = ash.instance_number and snaps.snap_id = ash.snap_id and sample_time - mod((cast(sample_time as date) - start_date)*24*60*60,inter)/24/60/60 = case when p.sample_source = 10 then :SLOT else null end union all
                 select 0           ,null     ,inst_id             ,sample_id ,sample_time ,session_id ,session_serial# ,session_type ,flags ,user_id ,sql_id ,is_sqlid_current ,sql_child_number ,sql_opcode ,sql_opname ,force_matching_signature ,top_level_sql_id ,top_level_sql_opcode ,sql_plan_hash_value ,sql_plan_line_id ,sql_plan_operation ,sql_plan_options ,sql_exec_id ,sql_exec_start ,plsql_entry_object_id ,plsql_entry_subprogram_id ,plsql_object_id ,plsql_subprogram_id ,qc_instance_id ,qc_session_id ,qc_session_serial# ,px_flags ,event ,event_id ,seq# ,p1text ,p1 ,p2text ,p2 ,p3text ,p3 ,wait_class ,wait_class_id ,wait_time ,session_state ,time_waited ,blocking_session_status ,blocking_session ,blocking_session_serial# ,blocking_inst_id ,blocking_hangchain_info ,current_obj# ,current_file# ,current_block# ,current_row# ,top_level_call# ,top_level_call_name ,consumer_group_id ,xid ,remote_instance# ,time_model ,in_connection_mgmt ,in_parse ,in_hard_parse ,in_sql_execution ,in_plsql_execution ,in_plsql_rpc ,in_plsql_compilation ,in_java_execution ,in_bind ,in_cursor_close ,in_sequence_load ,capture_overhead ,replay_overhead ,is_captured ,is_replayed ,service_hash ,program ,module ,action ,client_id ,machine ,port ,ecid ,dbreplay_file_id ,dbreplay_call_counter ,tm_delta_time ,tm_delta_cpu_time ,tm_delta_db_time ,delta_time ,delta_read_io_requests ,delta_write_io_requests ,delta_read_io_bytes ,delta_write_io_bytes ,delta_interconnect_io_bytes ,pga_allocated ,temp_space_allocated  from gv$active_session_history    ash,(select start_date, end_date, inter, sample_source from parms) p        where                                                                                                           sample_time - mod((cast(sample_time as date) - start_date)*24*60*60,inter)/24/60/60 = case when p.sample_source = 1  then :SLOT else null end)
-select
+select /*+ NO_PARALLEL */
 	 :DIM dim
     --ash.sample_id
     ,to_char(ash.sample_time,'yyyy-mm-dd hh24:mi:ss') sample_time
@@ -1129,9 +1337,11 @@ select
     --,ash.delta_write_io_requests
     --,ash.delta_read_io_bytes
     --,ash.delta_write_io_bytes
+    ,round(ash.delta_write_io_bytes/1024/1024) delta_write_io_bytes_mb
     --,ash.delta_interconnect_io_bytes
     ,ash.pga_allocated
     ,ash.temp_space_allocated
+    --,nvl((select to_char(sql_fulltext) from gv$sqlstats sqlt where sqlt.sql_id = ash.sql_id and rownum < 2),(select to_char(sql_text) from dba_hist_sqltext hs where hs.sql_id = ash.sql_id and rownum < 2)) sql_fulltext
     ,nvl((select dbms_lob.substr(sql_fulltext,1000) from gv$sqlstats sqlt where sqlt.sql_id = ash.sql_id and rownum < 2),(select dbms_lob.substr(sql_text,1000) from dba_hist_sqltext hs where hs.sql_id = ash.sql_id and rownum < 2)) sql_fulltext
 from ash
     cross join	parms
@@ -1225,26 +1435,6 @@ order by sample_time asc]]></sql>
 					
 					
 					
-						
-					
-					
-					
-					
-					
-					
-					
-					
-					
-					
-					
-					
-					
-					
-					
-					
-					
-					
-					
 					
 					
 					
@@ -1265,13 +1455,52 @@ order by sample_time asc]]></sql>
 					
 					
 						
+					
+					
+					
+					
+					
+					
+					
+					
+					
+					
+					
+					
+					
+					
+					
+					
+					
+					
+					
+					
+					
+					
+					
+					
+					
+					
+					
+					
+					
+					
+					
+					
+					
+					
+					
+					
+					
+					
 						
 						
 						
 						
 						
 						
-					null																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																							</data>
+						
+					null																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																						</data>
 				</header>
 				<footer enable="false" generatedate="false">
 					<data value="null" />
@@ -1294,7 +1523,7 @@ order by sample_time asc]]></sql>
 	,snaps as ( select snaps.dbid,snaps.instance_number,snaps.snap_id from dba_hist_snapshot snaps cross join parms where not (snaps.begin_interval_time > parms.end_date or snaps.end_interval_time < parms.start_date) and snaps.instance_number = nvl(parms.instance_number, snaps.instance_number))
     ,ash   as ( select ash.snap_id ,ash.dbid ,ash.instance_number ,sample_id ,sample_time ,session_id ,session_serial# ,session_type ,flags ,user_id ,sql_id ,is_sqlid_current ,sql_child_number ,sql_opcode ,sql_opname ,force_matching_signature ,top_level_sql_id ,top_level_sql_opcode ,sql_plan_hash_value ,sql_plan_line_id ,sql_plan_operation ,sql_plan_options ,sql_exec_id ,sql_exec_start ,plsql_entry_object_id ,plsql_entry_subprogram_id ,plsql_object_id ,plsql_subprogram_id ,qc_instance_id ,qc_session_id ,qc_session_serial# ,px_flags ,event ,event_id ,seq# ,p1text ,p1 ,p2text ,p2 ,p3text ,p3 ,wait_class ,wait_class_id ,wait_time ,session_state ,time_waited ,blocking_session_status ,blocking_session ,blocking_session_serial# ,blocking_inst_id ,blocking_hangchain_info ,current_obj# ,current_file# ,current_block# ,current_row# ,top_level_call# ,top_level_call_name ,consumer_group_id ,xid ,remote_instance# ,time_model ,in_connection_mgmt ,in_parse ,in_hard_parse ,in_sql_execution ,in_plsql_execution ,in_plsql_rpc ,in_plsql_compilation ,in_java_execution ,in_bind ,in_cursor_close ,in_sequence_load ,capture_overhead ,replay_overhead ,is_captured ,is_replayed ,service_hash ,program ,module ,action ,client_id ,machine ,port ,ecid ,dbreplay_file_id ,dbreplay_call_counter ,tm_delta_time ,tm_delta_cpu_time ,tm_delta_db_time ,delta_time ,delta_read_io_requests ,delta_write_io_requests ,delta_read_io_bytes ,delta_write_io_bytes ,delta_interconnect_io_bytes ,pga_allocated ,temp_space_allocated  from dba_hist_active_sess_history ash,(select start_date, end_date, inter, sample_source from parms) p, snaps where snaps.dbid = ash.dbid and snaps.instance_number = ash.instance_number and snaps.snap_id = ash.snap_id and sample_time - mod((cast(sample_time as date) - start_date)*24*60*60,inter)/24/60/60 = case when p.sample_source = 10 then :SLOT else null end union all
                 select 0           ,null     ,inst_id             ,sample_id ,sample_time ,session_id ,session_serial# ,session_type ,flags ,user_id ,sql_id ,is_sqlid_current ,sql_child_number ,sql_opcode ,sql_opname ,force_matching_signature ,top_level_sql_id ,top_level_sql_opcode ,sql_plan_hash_value ,sql_plan_line_id ,sql_plan_operation ,sql_plan_options ,sql_exec_id ,sql_exec_start ,plsql_entry_object_id ,plsql_entry_subprogram_id ,plsql_object_id ,plsql_subprogram_id ,qc_instance_id ,qc_session_id ,qc_session_serial# ,px_flags ,event ,event_id ,seq# ,p1text ,p1 ,p2text ,p2 ,p3text ,p3 ,wait_class ,wait_class_id ,wait_time ,session_state ,time_waited ,blocking_session_status ,blocking_session ,blocking_session_serial# ,blocking_inst_id ,blocking_hangchain_info ,current_obj# ,current_file# ,current_block# ,current_row# ,top_level_call# ,top_level_call_name ,consumer_group_id ,xid ,remote_instance# ,time_model ,in_connection_mgmt ,in_parse ,in_hard_parse ,in_sql_execution ,in_plsql_execution ,in_plsql_rpc ,in_plsql_compilation ,in_java_execution ,in_bind ,in_cursor_close ,in_sequence_load ,capture_overhead ,replay_overhead ,is_captured ,is_replayed ,service_hash ,program ,module ,action ,client_id ,machine ,port ,ecid ,dbreplay_file_id ,dbreplay_call_counter ,tm_delta_time ,tm_delta_cpu_time ,tm_delta_db_time ,delta_time ,delta_read_io_requests ,delta_write_io_requests ,delta_read_io_bytes ,delta_write_io_bytes ,delta_interconnect_io_bytes ,pga_allocated ,temp_space_allocated  from gv$active_session_history    ash,(select start_date, end_date, inter, sample_source from parms) p        where                                                                                                           sample_time - mod((cast(sample_time as date) - start_date)*24*60*60,inter)/24/60/60 = case when p.sample_source = 1  then :SLOT else null end)
-select distinct
+select /*+ NO_PARALLEL */ distinct
 	 :DIM dim
 	,ash.session_id         sid
 	,ash.session_serial#    serial#
@@ -1395,26 +1624,6 @@ order by cnt_sid desc]]></sql>
 					
 					
 					
-						
-					
-					
-					
-					
-					
-					
-					
-					
-					
-					
-					
-					
-					
-					
-					
-					
-					
-					
-					
 					
 					
 					
@@ -1435,13 +1644,52 @@ order by cnt_sid desc]]></sql>
 					
 					
 						
+					
+					
+					
+					
+					
+					
+					
+					
+					
+					
+					
+					
+					
+					
+					
+					
+					
+					
+					
+					
+					
+					
+					
+					
+					
+					
+					
+					
+					
+					
+					
+					
+					
+					
+					
+					
+					
+					
 						
 						
 						
 						
 						
 						
-						null																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																		</data>
+						
+						null																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																	</data>
 				</header>
 				<footer enable="false" generatedate="false">
 					<data value="null" />
@@ -1464,7 +1712,7 @@ order by cnt_sid desc]]></sql>
 	,snaps as ( select snaps.dbid,snaps.instance_number,snaps.snap_id from dba_hist_snapshot snaps cross join parms where not (snaps.begin_interval_time > parms.end_date or snaps.end_interval_time < parms.start_date) and snaps.instance_number = nvl(parms.instance_number, snaps.instance_number))
     ,ash   as ( select ash.snap_id ,ash.dbid ,ash.instance_number ,sample_id ,sample_time ,session_id ,session_serial# ,session_type ,flags ,user_id ,sql_id ,is_sqlid_current ,sql_child_number ,sql_opcode ,sql_opname ,force_matching_signature ,top_level_sql_id ,top_level_sql_opcode ,sql_plan_hash_value ,sql_plan_line_id ,sql_plan_operation ,sql_plan_options ,sql_exec_id ,sql_exec_start ,plsql_entry_object_id ,plsql_entry_subprogram_id ,plsql_object_id ,plsql_subprogram_id ,qc_instance_id ,qc_session_id ,qc_session_serial# ,px_flags ,event ,event_id ,seq# ,p1text ,p1 ,p2text ,p2 ,p3text ,p3 ,wait_class ,wait_class_id ,wait_time ,session_state ,time_waited ,blocking_session_status ,blocking_session ,blocking_session_serial# ,blocking_inst_id ,blocking_hangchain_info ,current_obj# ,current_file# ,current_block# ,current_row# ,top_level_call# ,top_level_call_name ,consumer_group_id ,xid ,remote_instance# ,time_model ,in_connection_mgmt ,in_parse ,in_hard_parse ,in_sql_execution ,in_plsql_execution ,in_plsql_rpc ,in_plsql_compilation ,in_java_execution ,in_bind ,in_cursor_close ,in_sequence_load ,capture_overhead ,replay_overhead ,is_captured ,is_replayed ,service_hash ,program ,module ,action ,client_id ,machine ,port ,ecid ,dbreplay_file_id ,dbreplay_call_counter ,tm_delta_time ,tm_delta_cpu_time ,tm_delta_db_time ,delta_time ,delta_read_io_requests ,delta_write_io_requests ,delta_read_io_bytes ,delta_write_io_bytes ,delta_interconnect_io_bytes ,pga_allocated ,temp_space_allocated  from dba_hist_active_sess_history ash,(select start_date, end_date, inter, sample_source from parms) p, snaps where snaps.dbid = ash.dbid and snaps.instance_number = ash.instance_number and snaps.snap_id = ash.snap_id and sample_time - mod((cast(sample_time as date) - start_date)*24*60*60,inter)/24/60/60 = case when p.sample_source = 10 then :SLOT else null end union all
                 select 0           ,null     ,inst_id             ,sample_id ,sample_time ,session_id ,session_serial# ,session_type ,flags ,user_id ,sql_id ,is_sqlid_current ,sql_child_number ,sql_opcode ,sql_opname ,force_matching_signature ,top_level_sql_id ,top_level_sql_opcode ,sql_plan_hash_value ,sql_plan_line_id ,sql_plan_operation ,sql_plan_options ,sql_exec_id ,sql_exec_start ,plsql_entry_object_id ,plsql_entry_subprogram_id ,plsql_object_id ,plsql_subprogram_id ,qc_instance_id ,qc_session_id ,qc_session_serial# ,px_flags ,event ,event_id ,seq# ,p1text ,p1 ,p2text ,p2 ,p3text ,p3 ,wait_class ,wait_class_id ,wait_time ,session_state ,time_waited ,blocking_session_status ,blocking_session ,blocking_session_serial# ,blocking_inst_id ,blocking_hangchain_info ,current_obj# ,current_file# ,current_block# ,current_row# ,top_level_call# ,top_level_call_name ,consumer_group_id ,xid ,remote_instance# ,time_model ,in_connection_mgmt ,in_parse ,in_hard_parse ,in_sql_execution ,in_plsql_execution ,in_plsql_rpc ,in_plsql_compilation ,in_java_execution ,in_bind ,in_cursor_close ,in_sequence_load ,capture_overhead ,replay_overhead ,is_captured ,is_replayed ,service_hash ,program ,module ,action ,client_id ,machine ,port ,ecid ,dbreplay_file_id ,dbreplay_call_counter ,tm_delta_time ,tm_delta_cpu_time ,tm_delta_db_time ,delta_time ,delta_read_io_requests ,delta_write_io_requests ,delta_read_io_bytes ,delta_write_io_bytes ,delta_interconnect_io_bytes ,pga_allocated ,temp_space_allocated  from gv$active_session_history    ash,(select start_date, end_date, inter, sample_source from parms) p        where                                                                                                           sample_time - mod((cast(sample_time as date) - start_date)*24*60*60,inter)/24/60/60 = case when p.sample_source = 1  then :SLOT else null end)
-select distinct
+select /*+ NO_PARALLEL */ distinct
 	 :DIM dim
 	,ash.event
 	,ash.session_id         sid
@@ -1568,26 +1816,6 @@ order by cnt_sid desc]]></sql>
 					
 					
 					
-						
-					
-					
-					
-					
-					
-					
-					
-					
-					
-					
-					
-					
-					
-					
-					
-					
-					
-					
-					
 					
 					
 					
@@ -1608,13 +1836,52 @@ order by cnt_sid desc]]></sql>
 					
 					
 						
+					
+					
+					
+					
+					
+					
+					
+					
+					
+					
+					
+					
+					
+					
+					
+					
+					
+					
+					
+					
+					
+					
+					
+					
+					
+					
+					
+					
+					
+					
+					
+					
+					
+					
+					
+					
+					
+					
 						
 						
 						
 						
 						
 						
-						null																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																		</data>
+						
+						null																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																	</data>
 				</header>
 				<footer enable="false" generatedate="false">
 					<data value="null" />
@@ -1637,7 +1904,7 @@ order by cnt_sid desc]]></sql>
 	,snaps as ( select snaps.dbid,snaps.instance_number,snaps.snap_id from dba_hist_snapshot snaps cross join parms where not (snaps.begin_interval_time > parms.end_date or snaps.end_interval_time < parms.start_date) and snaps.instance_number = nvl(parms.instance_number, snaps.instance_number))
     ,ash   as ( select ash.snap_id ,ash.dbid ,ash.instance_number ,sample_id ,sample_time ,session_id ,session_serial# ,session_type ,flags ,user_id ,sql_id ,is_sqlid_current ,sql_child_number ,sql_opcode ,sql_opname ,force_matching_signature ,top_level_sql_id ,top_level_sql_opcode ,sql_plan_hash_value ,sql_plan_line_id ,sql_plan_operation ,sql_plan_options ,sql_exec_id ,sql_exec_start ,plsql_entry_object_id ,plsql_entry_subprogram_id ,plsql_object_id ,plsql_subprogram_id ,qc_instance_id ,qc_session_id ,qc_session_serial# ,px_flags ,event ,event_id ,seq# ,p1text ,p1 ,p2text ,p2 ,p3text ,p3 ,wait_class ,wait_class_id ,wait_time ,session_state ,time_waited ,blocking_session_status ,blocking_session ,blocking_session_serial# ,blocking_inst_id ,blocking_hangchain_info ,current_obj# ,current_file# ,current_block# ,current_row# ,top_level_call# ,top_level_call_name ,consumer_group_id ,xid ,remote_instance# ,time_model ,in_connection_mgmt ,in_parse ,in_hard_parse ,in_sql_execution ,in_plsql_execution ,in_plsql_rpc ,in_plsql_compilation ,in_java_execution ,in_bind ,in_cursor_close ,in_sequence_load ,capture_overhead ,replay_overhead ,is_captured ,is_replayed ,service_hash ,program ,module ,action ,client_id ,machine ,port ,ecid ,dbreplay_file_id ,dbreplay_call_counter ,tm_delta_time ,tm_delta_cpu_time ,tm_delta_db_time ,delta_time ,delta_read_io_requests ,delta_write_io_requests ,delta_read_io_bytes ,delta_write_io_bytes ,delta_interconnect_io_bytes ,pga_allocated ,temp_space_allocated  from dba_hist_active_sess_history ash,(select start_date, end_date, inter, sample_source from parms) p, snaps where snaps.dbid = ash.dbid and snaps.instance_number = ash.instance_number and snaps.snap_id = ash.snap_id and sample_time - mod((cast(sample_time as date) - start_date)*24*60*60,inter)/24/60/60 = case when p.sample_source = 10 then :SLOT else null end union all
                 select 0           ,null     ,inst_id             ,sample_id ,sample_time ,session_id ,session_serial# ,session_type ,flags ,user_id ,sql_id ,is_sqlid_current ,sql_child_number ,sql_opcode ,sql_opname ,force_matching_signature ,top_level_sql_id ,top_level_sql_opcode ,sql_plan_hash_value ,sql_plan_line_id ,sql_plan_operation ,sql_plan_options ,sql_exec_id ,sql_exec_start ,plsql_entry_object_id ,plsql_entry_subprogram_id ,plsql_object_id ,plsql_subprogram_id ,qc_instance_id ,qc_session_id ,qc_session_serial# ,px_flags ,event ,event_id ,seq# ,p1text ,p1 ,p2text ,p2 ,p3text ,p3 ,wait_class ,wait_class_id ,wait_time ,session_state ,time_waited ,blocking_session_status ,blocking_session ,blocking_session_serial# ,blocking_inst_id ,blocking_hangchain_info ,current_obj# ,current_file# ,current_block# ,current_row# ,top_level_call# ,top_level_call_name ,consumer_group_id ,xid ,remote_instance# ,time_model ,in_connection_mgmt ,in_parse ,in_hard_parse ,in_sql_execution ,in_plsql_execution ,in_plsql_rpc ,in_plsql_compilation ,in_java_execution ,in_bind ,in_cursor_close ,in_sequence_load ,capture_overhead ,replay_overhead ,is_captured ,is_replayed ,service_hash ,program ,module ,action ,client_id ,machine ,port ,ecid ,dbreplay_file_id ,dbreplay_call_counter ,tm_delta_time ,tm_delta_cpu_time ,tm_delta_db_time ,delta_time ,delta_read_io_requests ,delta_write_io_requests ,delta_read_io_bytes ,delta_write_io_bytes ,delta_interconnect_io_bytes ,pga_allocated ,temp_space_allocated  from gv$active_session_history    ash,(select start_date, end_date, inter, sample_source from parms) p        where                                                                                                           sample_time - mod((cast(sample_time as date) - start_date)*24*60*60,inter)/24/60/60 = case when p.sample_source = 1  then :SLOT else null end)
-select distinct
+select /*+ NO_PARALLEL */ distinct
      ash.sql_id
     ,ash.sql_plan_hash_value
     ,count(qc_session_id)           over (partition by ash.sql_id,ash.sql_plan_hash_value) parallel_samples
@@ -1645,7 +1912,7 @@ select distinct
     ,count(distinct sql_exec_id)    over (partition by ash.sql_id,ash.sql_plan_hash_value) executions
     ,count(ash.sql_id)              over (partition by ash.sql_id,ash.sql_plan_hash_value) samples
     ,count(ash.sql_id)              over ()	cnt_tot
-    ,nvl((select dbms_lob.substr(sql_fulltext,1000) from gv$sqlstats sqlt where sqlt.sql_id = ash.sql_id and rownum < 2),(select dbms_lob.substr(sql_text,1000) from dba_hist_sqltext hs where hs.sql_id = ash.sql_id and rownum < 2)) sql_fulltext
+    ,nvl((select to_char(substr(sql_fulltext,1,1000)) from gv$sqlstats sqlt where sqlt.sql_id = ash.sql_id and rownum < 2),(select to_char(substr(sql_text,1,1000)) from dba_hist_sqltext hs where hs.sql_id = ash.sql_id and rownum < 2)) sql_fulltext
 from ash cross join	parms
 where 1=1
 	------- additional filters
@@ -1715,26 +1982,6 @@ order by load_pct_sql desc]]></sql>
 					
 					
 					
-						
-					
-					
-					
-					
-					
-					
-					
-					
-					
-					
-					
-					
-					
-					
-					
-					
-					
-					
-					
 					
 					
 					
@@ -1755,13 +2002,52 @@ order by load_pct_sql desc]]></sql>
 					
 					
 						
+					
+					
+					
+					
+					
+					
+					
+					
+					
+					
+					
+					
+					
+					
+					
+					
+					
+					
+					
+					
+					
+					
+					
+					
+					
+					
+					
+					
+					
+					
+					
+					
+					
+					
+					
+					
+					
+					
 						
 						
 						
 						
 						
 						
-					null																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																						</data>
+						
+					null																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																					</data>
 				</header>
 				<footer enable="false" generatedate="false">
 					<data value="null" />
@@ -1784,7 +2070,7 @@ order by load_pct_sql desc]]></sql>
 	,snaps as ( select snaps.dbid,snaps.instance_number,snaps.snap_id from dba_hist_snapshot snaps cross join parms where not (snaps.begin_interval_time > parms.end_date or snaps.end_interval_time < parms.start_date) and snaps.instance_number = nvl(parms.instance_number, snaps.instance_number))
     ,ash   as ( select ash.snap_id ,ash.dbid ,ash.instance_number ,sample_id ,sample_time ,session_id ,session_serial# ,session_type ,flags ,user_id ,sql_id ,is_sqlid_current ,sql_child_number ,sql_opcode ,sql_opname ,force_matching_signature ,top_level_sql_id ,top_level_sql_opcode ,sql_plan_hash_value ,sql_plan_line_id ,sql_plan_operation ,sql_plan_options ,sql_exec_id ,sql_exec_start ,plsql_entry_object_id ,plsql_entry_subprogram_id ,plsql_object_id ,plsql_subprogram_id ,qc_instance_id ,qc_session_id ,qc_session_serial# ,px_flags ,event ,event_id ,seq# ,p1text ,p1 ,p2text ,p2 ,p3text ,p3 ,wait_class ,wait_class_id ,wait_time ,session_state ,time_waited ,blocking_session_status ,blocking_session ,blocking_session_serial# ,blocking_inst_id ,blocking_hangchain_info ,current_obj# ,current_file# ,current_block# ,current_row# ,top_level_call# ,top_level_call_name ,consumer_group_id ,xid ,remote_instance# ,time_model ,in_connection_mgmt ,in_parse ,in_hard_parse ,in_sql_execution ,in_plsql_execution ,in_plsql_rpc ,in_plsql_compilation ,in_java_execution ,in_bind ,in_cursor_close ,in_sequence_load ,capture_overhead ,replay_overhead ,is_captured ,is_replayed ,service_hash ,program ,module ,action ,client_id ,machine ,port ,ecid ,dbreplay_file_id ,dbreplay_call_counter ,tm_delta_time ,tm_delta_cpu_time ,tm_delta_db_time ,delta_time ,delta_read_io_requests ,delta_write_io_requests ,delta_read_io_bytes ,delta_write_io_bytes ,delta_interconnect_io_bytes ,pga_allocated ,temp_space_allocated  from dba_hist_active_sess_history ash,(select start_date, end_date, inter, sample_source from parms) p, snaps where snaps.dbid = ash.dbid and snaps.instance_number = ash.instance_number and snaps.snap_id = ash.snap_id and sample_time - mod((cast(sample_time as date) - start_date)*24*60*60,inter)/24/60/60 = case when p.sample_source = 10 then :SLOT else null end union all
                 select 0           ,null     ,inst_id             ,sample_id ,sample_time ,session_id ,session_serial# ,session_type ,flags ,user_id ,sql_id ,is_sqlid_current ,sql_child_number ,sql_opcode ,sql_opname ,force_matching_signature ,top_level_sql_id ,top_level_sql_opcode ,sql_plan_hash_value ,sql_plan_line_id ,sql_plan_operation ,sql_plan_options ,sql_exec_id ,sql_exec_start ,plsql_entry_object_id ,plsql_entry_subprogram_id ,plsql_object_id ,plsql_subprogram_id ,qc_instance_id ,qc_session_id ,qc_session_serial# ,px_flags ,event ,event_id ,seq# ,p1text ,p1 ,p2text ,p2 ,p3text ,p3 ,wait_class ,wait_class_id ,wait_time ,session_state ,time_waited ,blocking_session_status ,blocking_session ,blocking_session_serial# ,blocking_inst_id ,blocking_hangchain_info ,current_obj# ,current_file# ,current_block# ,current_row# ,top_level_call# ,top_level_call_name ,consumer_group_id ,xid ,remote_instance# ,time_model ,in_connection_mgmt ,in_parse ,in_hard_parse ,in_sql_execution ,in_plsql_execution ,in_plsql_rpc ,in_plsql_compilation ,in_java_execution ,in_bind ,in_cursor_close ,in_sequence_load ,capture_overhead ,replay_overhead ,is_captured ,is_replayed ,service_hash ,program ,module ,action ,client_id ,machine ,port ,ecid ,dbreplay_file_id ,dbreplay_call_counter ,tm_delta_time ,tm_delta_cpu_time ,tm_delta_db_time ,delta_time ,delta_read_io_requests ,delta_write_io_requests ,delta_read_io_bytes ,delta_write_io_bytes ,delta_interconnect_io_bytes ,pga_allocated ,temp_space_allocated  from gv$active_session_history    ash,(select start_date, end_date, inter, sample_source from parms) p        where                                                                                                           sample_time - mod((cast(sample_time as date) - start_date)*24*60*60,inter)/24/60/60 = case when p.sample_source = 1  then :SLOT else null end)
-select distinct
+select /*+ NO_PARALLEL */ distinct
 	 :DIM dim
     ,ash.sql_id
     ,ash.sql_plan_hash_value
@@ -1795,7 +2081,7 @@ select distinct
 	,round(avg(ash.time_waited)     over (partition by ash.sql_id,ash.sql_plan_hash_value)/1000,2) avg_wait_time_ms 
     ,count(ash.sql_id)              over (partition by ash.sql_id,ash.sql_plan_hash_value) samples
     ,count(ash.sql_id)              over ()	cnt_tot
-    ,nvl((select dbms_lob.substr(sql_fulltext,1000) from gv$sqlstats sqlt where sqlt.sql_id = ash.sql_id and rownum < 2),(select dbms_lob.substr(sql_text,1000) from dba_hist_sqltext hs where hs.sql_id = ash.sql_id and rownum < 2)) sql_fulltext
+    ,nvl((select to_char(substr(sql_fulltext,1,1000)) from gv$sqlstats sqlt where sqlt.sql_id = ash.sql_id and rownum < 2),(select to_char(substr(sql_text,1,1000)) from dba_hist_sqltext hs where hs.sql_id = ash.sql_id and rownum < 2)) sql_fulltext
 from ash cross join	parms
 where 1=1
 	------- additional filters
@@ -1883,26 +2169,6 @@ order by load_pct_sql desc]]></sql>
 					
 					
 					
-						
-					
-					
-					
-					
-					
-					
-					
-					
-					
-					
-					
-					
-					
-					
-					
-					
-					
-					
-					
 					
 					
 					
@@ -1923,13 +2189,52 @@ order by load_pct_sql desc]]></sql>
 					
 					
 						
+					
+					
+					
+					
+					
+					
+					
+					
+					
+					
+					
+					
+					
+					
+					
+					
+					
+					
+					
+					
+					
+					
+					
+					
+					
+					
+					
+					
+					
+					
+					
+					
+					
+					
+					
+					
+					
+					
 						
 						
 						
 						
 						
 						
-					null																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																	</data>
+						
+					null																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																</data>
 				</header>
 				<footer enable="false" generatedate="false">
 					<data value="null" />
@@ -1952,7 +2257,7 @@ order by load_pct_sql desc]]></sql>
 	,snaps as ( select snaps.dbid,snaps.instance_number,snaps.snap_id from dba_hist_snapshot snaps cross join parms where not (snaps.begin_interval_time > parms.end_date or snaps.end_interval_time < parms.start_date) and snaps.instance_number = nvl(parms.instance_number, snaps.instance_number))
     ,ash   as ( select ash.snap_id ,ash.dbid ,ash.instance_number ,sample_id ,sample_time ,session_id ,session_serial# ,session_type ,flags ,user_id ,sql_id ,is_sqlid_current ,sql_child_number ,sql_opcode ,sql_opname ,force_matching_signature ,top_level_sql_id ,top_level_sql_opcode ,sql_plan_hash_value ,sql_plan_line_id ,sql_plan_operation ,sql_plan_options ,sql_exec_id ,sql_exec_start ,plsql_entry_object_id ,plsql_entry_subprogram_id ,plsql_object_id ,plsql_subprogram_id ,qc_instance_id ,qc_session_id ,qc_session_serial# ,px_flags ,event ,event_id ,seq# ,p1text ,p1 ,p2text ,p2 ,p3text ,p3 ,wait_class ,wait_class_id ,wait_time ,session_state ,time_waited ,blocking_session_status ,blocking_session ,blocking_session_serial# ,blocking_inst_id ,blocking_hangchain_info ,current_obj# ,current_file# ,current_block# ,current_row# ,top_level_call# ,top_level_call_name ,consumer_group_id ,xid ,remote_instance# ,time_model ,in_connection_mgmt ,in_parse ,in_hard_parse ,in_sql_execution ,in_plsql_execution ,in_plsql_rpc ,in_plsql_compilation ,in_java_execution ,in_bind ,in_cursor_close ,in_sequence_load ,capture_overhead ,replay_overhead ,is_captured ,is_replayed ,service_hash ,program ,module ,action ,client_id ,machine ,port ,ecid ,dbreplay_file_id ,dbreplay_call_counter ,tm_delta_time ,tm_delta_cpu_time ,tm_delta_db_time ,delta_time ,delta_read_io_requests ,delta_write_io_requests ,delta_read_io_bytes ,delta_write_io_bytes ,delta_interconnect_io_bytes ,pga_allocated ,temp_space_allocated  from dba_hist_active_sess_history ash,(select start_date, end_date, inter, sample_source from parms) p, snaps where snaps.dbid = ash.dbid and snaps.instance_number = ash.instance_number and snaps.snap_id = ash.snap_id and sample_time - mod((cast(sample_time as date) - start_date)*24*60*60,inter)/24/60/60 = case when p.sample_source = 10 then :SLOT else null end union all
                 select 0           ,null     ,inst_id             ,sample_id ,sample_time ,session_id ,session_serial# ,session_type ,flags ,user_id ,sql_id ,is_sqlid_current ,sql_child_number ,sql_opcode ,sql_opname ,force_matching_signature ,top_level_sql_id ,top_level_sql_opcode ,sql_plan_hash_value ,sql_plan_line_id ,sql_plan_operation ,sql_plan_options ,sql_exec_id ,sql_exec_start ,plsql_entry_object_id ,plsql_entry_subprogram_id ,plsql_object_id ,plsql_subprogram_id ,qc_instance_id ,qc_session_id ,qc_session_serial# ,px_flags ,event ,event_id ,seq# ,p1text ,p1 ,p2text ,p2 ,p3text ,p3 ,wait_class ,wait_class_id ,wait_time ,session_state ,time_waited ,blocking_session_status ,blocking_session ,blocking_session_serial# ,blocking_inst_id ,blocking_hangchain_info ,current_obj# ,current_file# ,current_block# ,current_row# ,top_level_call# ,top_level_call_name ,consumer_group_id ,xid ,remote_instance# ,time_model ,in_connection_mgmt ,in_parse ,in_hard_parse ,in_sql_execution ,in_plsql_execution ,in_plsql_rpc ,in_plsql_compilation ,in_java_execution ,in_bind ,in_cursor_close ,in_sequence_load ,capture_overhead ,replay_overhead ,is_captured ,is_replayed ,service_hash ,program ,module ,action ,client_id ,machine ,port ,ecid ,dbreplay_file_id ,dbreplay_call_counter ,tm_delta_time ,tm_delta_cpu_time ,tm_delta_db_time ,delta_time ,delta_read_io_requests ,delta_write_io_requests ,delta_read_io_bytes ,delta_write_io_bytes ,delta_interconnect_io_bytes ,pga_allocated ,temp_space_allocated  from gv$active_session_history    ash,(select start_date, end_date, inter, sample_source from parms) p        where                                                                                                           sample_time - mod((cast(sample_time as date) - start_date)*24*60*60,inter)/24/60/60 = case when p.sample_source = 1  then :SLOT else null end)
-select distinct
+select /*+ NO_PARALLEL */ distinct
 	 :DIM dim
     ,ash.event
     ,ash.sql_id
@@ -1962,7 +2267,7 @@ select distinct
     ,count(distinct sql_exec_id)    over (partition by ash.sql_id,ash.sql_plan_hash_value,ash.event) executions
     ,count(ash.sql_id)              over (partition by ash.sql_id,ash.sql_plan_hash_value,ash.event) samples
     ,count(ash.sql_id)              over ()	cnt_tot
-    ,nvl((select dbms_lob.substr(sql_fulltext,1000) from gv$sqlstats sqlt where sqlt.sql_id = ash.sql_id and rownum < 2),(select dbms_lob.substr(sql_text,1000) from dba_hist_sqltext hs where hs.sql_id = ash.sql_id and rownum < 2)) sql_fulltext
+    ,nvl((select to_char(substr(sql_fulltext,1,1000)) from gv$sqlstats sqlt where sqlt.sql_id = ash.sql_id and rownum < 2),(select to_char(substr(sql_text,1,1000)) from dba_hist_sqltext hs where hs.sql_id = ash.sql_id and rownum < 2)) sql_fulltext
 from ash cross join	parms
 where 1=1
 	------- additional filters
@@ -2050,26 +2355,6 @@ order by load_pct_sql desc]]></sql>
 					
 					
 					
-						
-					
-					
-					
-					
-					
-					
-					
-					
-					
-					
-					
-					
-					
-					
-					
-					
-					
-					
-					
 					
 					
 					
@@ -2090,13 +2375,52 @@ order by load_pct_sql desc]]></sql>
 					
 					
 						
+					
+					
+					
+					
+					
+					
+					
+					
+					
+					
+					
+					
+					
+					
+					
+					
+					
+					
+					
+					
+					
+					
+					
+					
+					
+					
+					
+					
+					
+					
+					
+					
+					
+					
+					
+					
+					
+					
 						
 						
 						
 						
 						
 						
-						null																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																		</data>
+						
+						null																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																	</data>
 				</header>
 				<footer enable="false" generatedate="false">
 					<data value="null" />
@@ -2119,7 +2443,7 @@ order by load_pct_sql desc]]></sql>
 	,snaps as ( select snaps.dbid,snaps.instance_number,snaps.snap_id from dba_hist_snapshot snaps cross join parms where not (snaps.begin_interval_time > parms.end_date or snaps.end_interval_time < parms.start_date) and snaps.instance_number = nvl(parms.instance_number, snaps.instance_number))
     ,ash   as ( select ash.snap_id ,ash.dbid ,ash.instance_number ,sample_id ,sample_time ,session_id ,session_serial# ,session_type ,flags ,user_id ,sql_id ,is_sqlid_current ,sql_child_number ,sql_opcode ,sql_opname ,force_matching_signature ,top_level_sql_id ,top_level_sql_opcode ,sql_plan_hash_value ,sql_plan_line_id ,sql_plan_operation ,sql_plan_options ,sql_exec_id ,sql_exec_start ,plsql_entry_object_id ,plsql_entry_subprogram_id ,plsql_object_id ,plsql_subprogram_id ,qc_instance_id ,qc_session_id ,qc_session_serial# ,px_flags ,event ,event_id ,seq# ,p1text ,p1 ,p2text ,p2 ,p3text ,p3 ,wait_class ,wait_class_id ,wait_time ,session_state ,time_waited ,blocking_session_status ,blocking_session ,blocking_session_serial# ,blocking_inst_id ,blocking_hangchain_info ,current_obj# ,current_file# ,current_block# ,current_row# ,top_level_call# ,top_level_call_name ,consumer_group_id ,xid ,remote_instance# ,time_model ,in_connection_mgmt ,in_parse ,in_hard_parse ,in_sql_execution ,in_plsql_execution ,in_plsql_rpc ,in_plsql_compilation ,in_java_execution ,in_bind ,in_cursor_close ,in_sequence_load ,capture_overhead ,replay_overhead ,is_captured ,is_replayed ,service_hash ,program ,module ,action ,client_id ,machine ,port ,ecid ,dbreplay_file_id ,dbreplay_call_counter ,tm_delta_time ,tm_delta_cpu_time ,tm_delta_db_time ,delta_time ,delta_read_io_requests ,delta_write_io_requests ,delta_read_io_bytes ,delta_write_io_bytes ,delta_interconnect_io_bytes ,pga_allocated ,temp_space_allocated  from dba_hist_active_sess_history ash,(select start_date, end_date, inter, sample_source from parms) p, snaps where snaps.dbid = ash.dbid and snaps.instance_number = ash.instance_number and snaps.snap_id = ash.snap_id and sample_time - mod((cast(sample_time as date) - start_date)*24*60*60,inter)/24/60/60 = case when p.sample_source = 10 then :SLOT else null end union all
                 select 0           ,null     ,inst_id             ,sample_id ,sample_time ,session_id ,session_serial# ,session_type ,flags ,user_id ,sql_id ,is_sqlid_current ,sql_child_number ,sql_opcode ,sql_opname ,force_matching_signature ,top_level_sql_id ,top_level_sql_opcode ,sql_plan_hash_value ,sql_plan_line_id ,sql_plan_operation ,sql_plan_options ,sql_exec_id ,sql_exec_start ,plsql_entry_object_id ,plsql_entry_subprogram_id ,plsql_object_id ,plsql_subprogram_id ,qc_instance_id ,qc_session_id ,qc_session_serial# ,px_flags ,event ,event_id ,seq# ,p1text ,p1 ,p2text ,p2 ,p3text ,p3 ,wait_class ,wait_class_id ,wait_time ,session_state ,time_waited ,blocking_session_status ,blocking_session ,blocking_session_serial# ,blocking_inst_id ,blocking_hangchain_info ,current_obj# ,current_file# ,current_block# ,current_row# ,top_level_call# ,top_level_call_name ,consumer_group_id ,xid ,remote_instance# ,time_model ,in_connection_mgmt ,in_parse ,in_hard_parse ,in_sql_execution ,in_plsql_execution ,in_plsql_rpc ,in_plsql_compilation ,in_java_execution ,in_bind ,in_cursor_close ,in_sequence_load ,capture_overhead ,replay_overhead ,is_captured ,is_replayed ,service_hash ,program ,module ,action ,client_id ,machine ,port ,ecid ,dbreplay_file_id ,dbreplay_call_counter ,tm_delta_time ,tm_delta_cpu_time ,tm_delta_db_time ,delta_time ,delta_read_io_requests ,delta_write_io_requests ,delta_read_io_bytes ,delta_write_io_bytes ,delta_interconnect_io_bytes ,pga_allocated ,temp_space_allocated  from gv$active_session_history    ash,(select start_date, end_date, inter, sample_source from parms) p        where                                                                                                           sample_time - mod((cast(sample_time as date) - start_date)*24*60*60,inter)/24/60/60 = case when p.sample_source = 1  then :SLOT else null end)
-select distinct
+select /*+ NO_PARALLEL */ distinct
 	 owner
 	,object_name
     ,subobject_name
@@ -2199,26 +2523,6 @@ order by load_pct_obj desc]]></sql>
 					
 					
 					
-						
-					
-					
-					
-					
-					
-					
-					
-					
-					
-					
-					
-					
-					
-					
-					
-					
-					
-					
-					
 					
 					
 					
@@ -2239,13 +2543,52 @@ order by load_pct_obj desc]]></sql>
 					
 					
 						
+					
+					
+					
+					
+					
+					
+					
+					
+					
+					
+					
+					
+					
+					
+					
+					
+					
+					
+					
+					
+					
+					
+					
+					
+					
+					
+					
+					
+					
+					
+					
+					
+					
+					
+					
+					
+					
+					
 						
 						
 						
 						
 						
 						
-						null																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																		</data>
+						
+						null																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																	</data>
 				</header>
 				<footer enable="false" generatedate="false">
 					<data value="null" />
@@ -2268,7 +2611,7 @@ order by load_pct_obj desc]]></sql>
 	,snaps as ( select snaps.dbid,snaps.instance_number,snaps.snap_id from dba_hist_snapshot snaps cross join parms where not (snaps.begin_interval_time > parms.end_date or snaps.end_interval_time < parms.start_date) and snaps.instance_number = nvl(parms.instance_number, snaps.instance_number))
     ,ash   as ( select ash.snap_id ,ash.dbid ,ash.instance_number ,sample_id ,sample_time ,session_id ,session_serial# ,session_type ,flags ,user_id ,sql_id ,is_sqlid_current ,sql_child_number ,sql_opcode ,sql_opname ,force_matching_signature ,top_level_sql_id ,top_level_sql_opcode ,sql_plan_hash_value ,sql_plan_line_id ,sql_plan_operation ,sql_plan_options ,sql_exec_id ,sql_exec_start ,plsql_entry_object_id ,plsql_entry_subprogram_id ,plsql_object_id ,plsql_subprogram_id ,qc_instance_id ,qc_session_id ,qc_session_serial# ,px_flags ,event ,event_id ,seq# ,p1text ,p1 ,p2text ,p2 ,p3text ,p3 ,wait_class ,wait_class_id ,wait_time ,session_state ,time_waited ,blocking_session_status ,blocking_session ,blocking_session_serial# ,blocking_inst_id ,blocking_hangchain_info ,current_obj# ,current_file# ,current_block# ,current_row# ,top_level_call# ,top_level_call_name ,consumer_group_id ,xid ,remote_instance# ,time_model ,in_connection_mgmt ,in_parse ,in_hard_parse ,in_sql_execution ,in_plsql_execution ,in_plsql_rpc ,in_plsql_compilation ,in_java_execution ,in_bind ,in_cursor_close ,in_sequence_load ,capture_overhead ,replay_overhead ,is_captured ,is_replayed ,service_hash ,program ,module ,action ,client_id ,machine ,port ,ecid ,dbreplay_file_id ,dbreplay_call_counter ,tm_delta_time ,tm_delta_cpu_time ,tm_delta_db_time ,delta_time ,delta_read_io_requests ,delta_write_io_requests ,delta_read_io_bytes ,delta_write_io_bytes ,delta_interconnect_io_bytes ,pga_allocated ,temp_space_allocated  from dba_hist_active_sess_history ash,(select start_date, end_date, inter, sample_source from parms) p, snaps where snaps.dbid = ash.dbid and snaps.instance_number = ash.instance_number and snaps.snap_id = ash.snap_id and sample_time - mod((cast(sample_time as date) - start_date)*24*60*60,inter)/24/60/60 = case when p.sample_source = 10 then :SLOT else null end union all
                 select 0           ,null     ,inst_id             ,sample_id ,sample_time ,session_id ,session_serial# ,session_type ,flags ,user_id ,sql_id ,is_sqlid_current ,sql_child_number ,sql_opcode ,sql_opname ,force_matching_signature ,top_level_sql_id ,top_level_sql_opcode ,sql_plan_hash_value ,sql_plan_line_id ,sql_plan_operation ,sql_plan_options ,sql_exec_id ,sql_exec_start ,plsql_entry_object_id ,plsql_entry_subprogram_id ,plsql_object_id ,plsql_subprogram_id ,qc_instance_id ,qc_session_id ,qc_session_serial# ,px_flags ,event ,event_id ,seq# ,p1text ,p1 ,p2text ,p2 ,p3text ,p3 ,wait_class ,wait_class_id ,wait_time ,session_state ,time_waited ,blocking_session_status ,blocking_session ,blocking_session_serial# ,blocking_inst_id ,blocking_hangchain_info ,current_obj# ,current_file# ,current_block# ,current_row# ,top_level_call# ,top_level_call_name ,consumer_group_id ,xid ,remote_instance# ,time_model ,in_connection_mgmt ,in_parse ,in_hard_parse ,in_sql_execution ,in_plsql_execution ,in_plsql_rpc ,in_plsql_compilation ,in_java_execution ,in_bind ,in_cursor_close ,in_sequence_load ,capture_overhead ,replay_overhead ,is_captured ,is_replayed ,service_hash ,program ,module ,action ,client_id ,machine ,port ,ecid ,dbreplay_file_id ,dbreplay_call_counter ,tm_delta_time ,tm_delta_cpu_time ,tm_delta_db_time ,delta_time ,delta_read_io_requests ,delta_write_io_requests ,delta_read_io_bytes ,delta_write_io_bytes ,delta_interconnect_io_bytes ,pga_allocated ,temp_space_allocated  from gv$active_session_history    ash,(select start_date, end_date, inter, sample_source from parms) p        where                                                                                                           sample_time - mod((cast(sample_time as date) - start_date)*24*60*60,inter)/24/60/60 = case when p.sample_source = 1  then :SLOT else null end)
-select distinct
+select /*+ NO_PARALLEL */ distinct
 	 :DIM dim
     ,owner
 	,object_name
@@ -2367,26 +2710,6 @@ order by load_pct_obj desc]]></sql>
 					
 					
 					
-						
-					
-					
-					
-					
-					
-					
-					
-					
-					
-					
-					
-					
-					
-					
-					
-					
-					
-					
-					
 					
 					
 					
@@ -2407,13 +2730,52 @@ order by load_pct_obj desc]]></sql>
 					
 					
 						
+					
+					
+					
+					
+					
+					
+					
+					
+					
+					
+					
+					
+					
+					
+					
+					
+					
+					
+					
+					
+					
+					
+					
+					
+					
+					
+					
+					
+					
+					
+					
+					
+					
+					
+					
+					
+					
+					
 						
 						
 						
 						
 						
 						
-					null																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																							</data>
+						
+					null																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																						</data>
 				</header>
 				<footer enable="false" generatedate="false">
 					<data value="null" />
@@ -2436,7 +2798,7 @@ order by load_pct_obj desc]]></sql>
 	,snaps as ( select snaps.dbid,snaps.instance_number,snaps.snap_id from dba_hist_snapshot snaps cross join parms where not (snaps.begin_interval_time > parms.end_date or snaps.end_interval_time < parms.start_date) and snaps.instance_number = nvl(parms.instance_number, snaps.instance_number))
     ,ash   as ( select ash.snap_id ,ash.dbid ,ash.instance_number ,sample_id ,sample_time ,session_id ,session_serial# ,session_type ,flags ,user_id ,sql_id ,is_sqlid_current ,sql_child_number ,sql_opcode ,sql_opname ,force_matching_signature ,top_level_sql_id ,top_level_sql_opcode ,sql_plan_hash_value ,sql_plan_line_id ,sql_plan_operation ,sql_plan_options ,sql_exec_id ,sql_exec_start ,plsql_entry_object_id ,plsql_entry_subprogram_id ,plsql_object_id ,plsql_subprogram_id ,qc_instance_id ,qc_session_id ,qc_session_serial# ,px_flags ,event ,event_id ,seq# ,p1text ,p1 ,p2text ,p2 ,p3text ,p3 ,wait_class ,wait_class_id ,wait_time ,session_state ,time_waited ,blocking_session_status ,blocking_session ,blocking_session_serial# ,blocking_inst_id ,blocking_hangchain_info ,current_obj# ,current_file# ,current_block# ,current_row# ,top_level_call# ,top_level_call_name ,consumer_group_id ,xid ,remote_instance# ,time_model ,in_connection_mgmt ,in_parse ,in_hard_parse ,in_sql_execution ,in_plsql_execution ,in_plsql_rpc ,in_plsql_compilation ,in_java_execution ,in_bind ,in_cursor_close ,in_sequence_load ,capture_overhead ,replay_overhead ,is_captured ,is_replayed ,service_hash ,program ,module ,action ,client_id ,machine ,port ,ecid ,dbreplay_file_id ,dbreplay_call_counter ,tm_delta_time ,tm_delta_cpu_time ,tm_delta_db_time ,delta_time ,delta_read_io_requests ,delta_write_io_requests ,delta_read_io_bytes ,delta_write_io_bytes ,delta_interconnect_io_bytes ,pga_allocated ,temp_space_allocated  from dba_hist_active_sess_history ash,(select start_date, end_date, inter, sample_source from parms) p, snaps where snaps.dbid = ash.dbid and snaps.instance_number = ash.instance_number and snaps.snap_id = ash.snap_id and sample_time - mod((cast(sample_time as date) - start_date)*24*60*60,inter)/24/60/60 = case when p.sample_source = 10 then :SLOT else null end union all
                 select 0           ,null     ,inst_id             ,sample_id ,sample_time ,session_id ,session_serial# ,session_type ,flags ,user_id ,sql_id ,is_sqlid_current ,sql_child_number ,sql_opcode ,sql_opname ,force_matching_signature ,top_level_sql_id ,top_level_sql_opcode ,sql_plan_hash_value ,sql_plan_line_id ,sql_plan_operation ,sql_plan_options ,sql_exec_id ,sql_exec_start ,plsql_entry_object_id ,plsql_entry_subprogram_id ,plsql_object_id ,plsql_subprogram_id ,qc_instance_id ,qc_session_id ,qc_session_serial# ,px_flags ,event ,event_id ,seq# ,p1text ,p1 ,p2text ,p2 ,p3text ,p3 ,wait_class ,wait_class_id ,wait_time ,session_state ,time_waited ,blocking_session_status ,blocking_session ,blocking_session_serial# ,blocking_inst_id ,blocking_hangchain_info ,current_obj# ,current_file# ,current_block# ,current_row# ,top_level_call# ,top_level_call_name ,consumer_group_id ,xid ,remote_instance# ,time_model ,in_connection_mgmt ,in_parse ,in_hard_parse ,in_sql_execution ,in_plsql_execution ,in_plsql_rpc ,in_plsql_compilation ,in_java_execution ,in_bind ,in_cursor_close ,in_sequence_load ,capture_overhead ,replay_overhead ,is_captured ,is_replayed ,service_hash ,program ,module ,action ,client_id ,machine ,port ,ecid ,dbreplay_file_id ,dbreplay_call_counter ,tm_delta_time ,tm_delta_cpu_time ,tm_delta_db_time ,delta_time ,delta_read_io_requests ,delta_write_io_requests ,delta_read_io_bytes ,delta_write_io_bytes ,delta_interconnect_io_bytes ,pga_allocated ,temp_space_allocated  from gv$active_session_history    ash,(select start_date, end_date, inter, sample_source from parms) p        where                                                                                                           sample_time - mod((cast(sample_time as date) - start_date)*24*60*60,inter)/24/60/60 = case when p.sample_source = 1  then :SLOT else null end)
-select distinct
+select /*+ NO_PARALLEL */ distinct
      :DIM dim
     ,ash.event
     ,owner
@@ -2538,26 +2900,6 @@ order by load_pct_obj desc]]></sql>
 					
 					
 					
-						
-					
-					
-					
-					
-					
-					
-					
-					
-					
-					
-					
-					
-					
-					
-					
-					
-					
-					
-					
 					
 					
 					
@@ -2578,13 +2920,52 @@ order by load_pct_obj desc]]></sql>
 					
 					
 						
+					
+					
+					
+					
+					
+					
+					
+					
+					
+					
+					
+					
+					
+					
+					
+					
+					
+					
+					
+					
+					
+					
+					
+					
+					
+					
+					
+					
+					
+					
+					
+					
+					
+					
+					
+					
+					
+					
 						
 						
 						
 						
 						
 						
-					null																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																							</data>
+						
+					null																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																																						</data>
 				</header>
 				<footer enable="false" generatedate="false">
 					<data value="null" />
@@ -2607,7 +2988,7 @@ order by load_pct_obj desc]]></sql>
 	,snaps as ( select snaps.dbid,snaps.instance_number,snaps.snap_id from dba_hist_snapshot snaps cross join parms where not (snaps.begin_interval_time > parms.end_date or snaps.end_interval_time < parms.start_date) and snaps.instance_number = nvl(parms.instance_number, snaps.instance_number))
     ,ash   as ( select ash.snap_id ,ash.dbid ,ash.instance_number ,sample_id ,sample_time ,session_id ,session_serial# ,session_type ,flags ,user_id ,sql_id ,is_sqlid_current ,sql_child_number ,sql_opcode ,sql_opname ,force_matching_signature ,top_level_sql_id ,top_level_sql_opcode ,sql_plan_hash_value ,sql_plan_line_id ,sql_plan_operation ,sql_plan_options ,sql_exec_id ,sql_exec_start ,plsql_entry_object_id ,plsql_entry_subprogram_id ,plsql_object_id ,plsql_subprogram_id ,qc_instance_id ,qc_session_id ,qc_session_serial# ,px_flags ,event ,event_id ,seq# ,p1text ,p1 ,p2text ,p2 ,p3text ,p3 ,wait_class ,wait_class_id ,wait_time ,session_state ,time_waited ,blocking_session_status ,blocking_session ,blocking_session_serial# ,blocking_inst_id ,blocking_hangchain_info ,current_obj# ,current_file# ,current_block# ,current_row# ,top_level_call# ,top_level_call_name ,consumer_group_id ,xid ,remote_instance# ,time_model ,in_connection_mgmt ,in_parse ,in_hard_parse ,in_sql_execution ,in_plsql_execution ,in_plsql_rpc ,in_plsql_compilation ,in_java_execution ,in_bind ,in_cursor_close ,in_sequence_load ,capture_overhead ,replay_overhead ,is_captured ,is_replayed ,service_hash ,program ,module ,action ,client_id ,machine ,port ,ecid ,dbreplay_file_id ,dbreplay_call_counter ,tm_delta_time ,tm_delta_cpu_time ,tm_delta_db_time ,delta_time ,delta_read_io_requests ,delta_write_io_requests ,delta_read_io_bytes ,delta_write_io_bytes ,delta_interconnect_io_bytes ,pga_allocated ,temp_space_allocated  from dba_hist_active_sess_history ash,(select start_date, end_date, inter, sample_source from parms) p, snaps where snaps.dbid = ash.dbid and snaps.instance_number = ash.instance_number and snaps.snap_id = ash.snap_id and sample_time - mod((cast(sample_time as date) - start_date)*24*60*60,inter)/24/60/60 = case when p.sample_source = 10 then :SLOT else null end union all
                 select 0           ,null     ,inst_id             ,sample_id ,sample_time ,session_id ,session_serial# ,session_type ,flags ,user_id ,sql_id ,is_sqlid_current ,sql_child_number ,sql_opcode ,sql_opname ,force_matching_signature ,top_level_sql_id ,top_level_sql_opcode ,sql_plan_hash_value ,sql_plan_line_id ,sql_plan_operation ,sql_plan_options ,sql_exec_id ,sql_exec_start ,plsql_entry_object_id ,plsql_entry_subprogram_id ,plsql_object_id ,plsql_subprogram_id ,qc_instance_id ,qc_session_id ,qc_session_serial# ,px_flags ,event ,event_id ,seq# ,p1text ,p1 ,p2text ,p2 ,p3text ,p3 ,wait_class ,wait_class_id ,wait_time ,session_state ,time_waited ,blocking_session_status ,blocking_session ,blocking_session_serial# ,blocking_inst_id ,blocking_hangchain_info ,current_obj# ,current_file# ,current_block# ,current_row# ,top_level_call# ,top_level_call_name ,consumer_group_id ,xid ,remote_instance# ,time_model ,in_connection_mgmt ,in_parse ,in_hard_parse ,in_sql_execution ,in_plsql_execution ,in_plsql_rpc ,in_plsql_compilation ,in_java_execution ,in_bind ,in_cursor_close ,in_sequence_load ,capture_overhead ,replay_overhead ,is_captured ,is_replayed ,service_hash ,program ,module ,action ,client_id ,machine ,port ,ecid ,dbreplay_file_id ,dbreplay_call_counter ,tm_delta_time ,tm_delta_cpu_time ,tm_delta_db_time ,delta_time ,delta_read_io_requests ,delta_write_io_requests ,delta_read_io_bytes ,delta_write_io_bytes ,delta_interconnect_io_bytes ,pga_allocated ,temp_space_allocated  from gv$active_session_history    ash,(select start_date, end_date, inter, sample_source from parms) p        where                                                                                                           sample_time - mod((cast(sample_time as date) - start_date)*24*60*60,inter)/24/60/60 = case when p.sample_source = 1  then :SLOT else null end)
-select distinct
+select /*+ NO_PARALLEL */ distinct
      :DIM dim
     ,ash.event
     ,obj.owner
@@ -2715,6 +3096,25 @@ order by load_pct desc]]></sql>
 					
 					
 					
+					
+					
+					
+					
+					
+					
+					
+					
+					
+					
+					
+					
+					
+					
+					
+					
+					
+					
+					
 						
 					
 					
@@ -2735,7 +3135,7 @@ order by load_pct desc]]></sql>
 					
 					
 					
-					null																																																																																																																																																																																																																																																																																																																																	</data>
+					null																																																																																																																																																																																																																																																																																																																																																																																																																																</data>
 				</header>
 				<footer enable="false" generatedate="false">
 					<data value="null" />
@@ -2758,7 +3158,7 @@ order by load_pct desc]]></sql>
 	,snaps as ( select snaps.dbid,snaps.instance_number,snaps.snap_id from dba_hist_snapshot snaps cross join parms where not (snaps.begin_interval_time > parms.end_date or snaps.end_interval_time < parms.start_date) and snaps.instance_number = nvl(parms.instance_number, snaps.instance_number))
     ,ash   as ( select ash.snap_id ,ash.dbid ,ash.instance_number ,sample_id ,sample_time ,session_id ,session_serial# ,session_type ,flags ,user_id ,sql_id ,is_sqlid_current ,sql_child_number ,sql_opcode ,sql_opname ,force_matching_signature ,top_level_sql_id ,top_level_sql_opcode ,sql_plan_hash_value ,sql_plan_line_id ,sql_plan_operation ,sql_plan_options ,sql_exec_id ,sql_exec_start ,plsql_entry_object_id ,plsql_entry_subprogram_id ,plsql_object_id ,plsql_subprogram_id ,qc_instance_id ,qc_session_id ,qc_session_serial# ,px_flags ,event ,event_id ,seq# ,p1text ,p1 ,p2text ,p2 ,p3text ,p3 ,wait_class ,wait_class_id ,wait_time ,session_state ,time_waited ,blocking_session_status ,blocking_session ,blocking_session_serial# ,blocking_inst_id ,blocking_hangchain_info ,current_obj# ,current_file# ,current_block# ,current_row# ,top_level_call# ,top_level_call_name ,consumer_group_id ,xid ,remote_instance# ,time_model ,in_connection_mgmt ,in_parse ,in_hard_parse ,in_sql_execution ,in_plsql_execution ,in_plsql_rpc ,in_plsql_compilation ,in_java_execution ,in_bind ,in_cursor_close ,in_sequence_load ,capture_overhead ,replay_overhead ,is_captured ,is_replayed ,service_hash ,program ,module ,action ,client_id ,machine ,port ,ecid ,dbreplay_file_id ,dbreplay_call_counter ,tm_delta_time ,tm_delta_cpu_time ,tm_delta_db_time ,delta_time ,delta_read_io_requests ,delta_write_io_requests ,delta_read_io_bytes ,delta_write_io_bytes ,delta_interconnect_io_bytes ,pga_allocated ,temp_space_allocated  from dba_hist_active_sess_history ash,(select start_date, end_date, inter, sample_source from parms) p, snaps where snaps.dbid = ash.dbid and snaps.instance_number = ash.instance_number and snaps.snap_id = ash.snap_id and sample_time - mod((cast(sample_time as date) - start_date)*24*60*60,inter)/24/60/60 = case when p.sample_source = 10 then :SLOT else null end union all
                 select 0           ,null     ,inst_id             ,sample_id ,sample_time ,session_id ,session_serial# ,session_type ,flags ,user_id ,sql_id ,is_sqlid_current ,sql_child_number ,sql_opcode ,sql_opname ,force_matching_signature ,top_level_sql_id ,top_level_sql_opcode ,sql_plan_hash_value ,sql_plan_line_id ,sql_plan_operation ,sql_plan_options ,sql_exec_id ,sql_exec_start ,plsql_entry_object_id ,plsql_entry_subprogram_id ,plsql_object_id ,plsql_subprogram_id ,qc_instance_id ,qc_session_id ,qc_session_serial# ,px_flags ,event ,event_id ,seq# ,p1text ,p1 ,p2text ,p2 ,p3text ,p3 ,wait_class ,wait_class_id ,wait_time ,session_state ,time_waited ,blocking_session_status ,blocking_session ,blocking_session_serial# ,blocking_inst_id ,blocking_hangchain_info ,current_obj# ,current_file# ,current_block# ,current_row# ,top_level_call# ,top_level_call_name ,consumer_group_id ,xid ,remote_instance# ,time_model ,in_connection_mgmt ,in_parse ,in_hard_parse ,in_sql_execution ,in_plsql_execution ,in_plsql_rpc ,in_plsql_compilation ,in_java_execution ,in_bind ,in_cursor_close ,in_sequence_load ,capture_overhead ,replay_overhead ,is_captured ,is_replayed ,service_hash ,program ,module ,action ,client_id ,machine ,port ,ecid ,dbreplay_file_id ,dbreplay_call_counter ,tm_delta_time ,tm_delta_cpu_time ,tm_delta_db_time ,delta_time ,delta_read_io_requests ,delta_write_io_requests ,delta_read_io_bytes ,delta_write_io_bytes ,delta_interconnect_io_bytes ,pga_allocated ,temp_space_allocated  from gv$active_session_history    ash,(select start_date, end_date, inter, sample_source from parms) p        where                                                                                                           sample_time - mod((cast(sample_time as date) - start_date)*24*60*60,inter)/24/60/60 = case when p.sample_source = 1  then :SLOT else null end)
-select distinct
+select /*+ NO_PARALLEL */ distinct
      ash.sql_id
     ,sql_plan_hash_value	
     ,sql_plan_line_id	
@@ -2845,6 +3245,25 @@ order by load_pct desc]]></sql>
 					
 					
 					
+					
+					
+					
+					
+					
+					
+					
+					
+					
+					
+					
+					
+					
+					
+					
+					
+					
+					
+					
 						
 					
 					
@@ -2865,7 +3284,7 @@ order by load_pct desc]]></sql>
 					
 					
 					
-					null																																																																																																																																																																																																																																																																																																																																	</data>
+					null																																																																																																																																																																																																																																																																																																																																																																																																																																</data>
 				</header>
 				<footer enable="false" generatedate="false">
 					<data value="null" />
@@ -2888,7 +3307,7 @@ order by load_pct desc]]></sql>
 	,snaps as ( select snaps.dbid,snaps.instance_number,snaps.snap_id from dba_hist_snapshot snaps cross join parms where not (snaps.begin_interval_time > parms.end_date or snaps.end_interval_time < parms.start_date) and snaps.instance_number = nvl(parms.instance_number, snaps.instance_number))
     ,ash   as ( select ash.snap_id ,ash.dbid ,ash.instance_number ,sample_id ,sample_time ,session_id ,session_serial# ,session_type ,flags ,user_id ,sql_id ,is_sqlid_current ,sql_child_number ,sql_opcode ,sql_opname ,force_matching_signature ,top_level_sql_id ,top_level_sql_opcode ,sql_plan_hash_value ,sql_plan_line_id ,sql_plan_operation ,sql_plan_options ,sql_exec_id ,sql_exec_start ,plsql_entry_object_id ,plsql_entry_subprogram_id ,plsql_object_id ,plsql_subprogram_id ,qc_instance_id ,qc_session_id ,qc_session_serial# ,px_flags ,event ,event_id ,seq# ,p1text ,p1 ,p2text ,p2 ,p3text ,p3 ,wait_class ,wait_class_id ,wait_time ,session_state ,time_waited ,blocking_session_status ,blocking_session ,blocking_session_serial# ,blocking_inst_id ,blocking_hangchain_info ,current_obj# ,current_file# ,current_block# ,current_row# ,top_level_call# ,top_level_call_name ,consumer_group_id ,xid ,remote_instance# ,time_model ,in_connection_mgmt ,in_parse ,in_hard_parse ,in_sql_execution ,in_plsql_execution ,in_plsql_rpc ,in_plsql_compilation ,in_java_execution ,in_bind ,in_cursor_close ,in_sequence_load ,capture_overhead ,replay_overhead ,is_captured ,is_replayed ,service_hash ,program ,module ,action ,client_id ,machine ,port ,ecid ,dbreplay_file_id ,dbreplay_call_counter ,tm_delta_time ,tm_delta_cpu_time ,tm_delta_db_time ,delta_time ,delta_read_io_requests ,delta_write_io_requests ,delta_read_io_bytes ,delta_write_io_bytes ,delta_interconnect_io_bytes ,pga_allocated ,temp_space_allocated  from dba_hist_active_sess_history ash,(select start_date, end_date, inter, sample_source from parms) p, snaps where snaps.dbid = ash.dbid and snaps.instance_number = ash.instance_number and snaps.snap_id = ash.snap_id and sample_time - mod((cast(sample_time as date) - start_date)*24*60*60,inter)/24/60/60 = case when p.sample_source = 10 then :SLOT else null end union all
                 select 0           ,null     ,inst_id             ,sample_id ,sample_time ,session_id ,session_serial# ,session_type ,flags ,user_id ,sql_id ,is_sqlid_current ,sql_child_number ,sql_opcode ,sql_opname ,force_matching_signature ,top_level_sql_id ,top_level_sql_opcode ,sql_plan_hash_value ,sql_plan_line_id ,sql_plan_operation ,sql_plan_options ,sql_exec_id ,sql_exec_start ,plsql_entry_object_id ,plsql_entry_subprogram_id ,plsql_object_id ,plsql_subprogram_id ,qc_instance_id ,qc_session_id ,qc_session_serial# ,px_flags ,event ,event_id ,seq# ,p1text ,p1 ,p2text ,p2 ,p3text ,p3 ,wait_class ,wait_class_id ,wait_time ,session_state ,time_waited ,blocking_session_status ,blocking_session ,blocking_session_serial# ,blocking_inst_id ,blocking_hangchain_info ,current_obj# ,current_file# ,current_block# ,current_row# ,top_level_call# ,top_level_call_name ,consumer_group_id ,xid ,remote_instance# ,time_model ,in_connection_mgmt ,in_parse ,in_hard_parse ,in_sql_execution ,in_plsql_execution ,in_plsql_rpc ,in_plsql_compilation ,in_java_execution ,in_bind ,in_cursor_close ,in_sequence_load ,capture_overhead ,replay_overhead ,is_captured ,is_replayed ,service_hash ,program ,module ,action ,client_id ,machine ,port ,ecid ,dbreplay_file_id ,dbreplay_call_counter ,tm_delta_time ,tm_delta_cpu_time ,tm_delta_db_time ,delta_time ,delta_read_io_requests ,delta_write_io_requests ,delta_read_io_bytes ,delta_write_io_bytes ,delta_interconnect_io_bytes ,pga_allocated ,temp_space_allocated  from gv$active_session_history    ash,(select start_date, end_date, inter, sample_source from parms) p        where                                                                                                           sample_time - mod((cast(sample_time as date) - start_date)*24*60*60,inter)/24/60/60 = case when p.sample_source = 1  then :SLOT else null end)
-select distinct
+select /*+ NO_PARALLEL */ distinct
      ash.sql_id
     ,sql_plan_hash_value	
     ,sql_plan_line_id	
@@ -2992,6 +3411,25 @@ order by load_pct desc]]></sql>
 					
 					
 					
+					
+					
+					
+					
+					
+					
+					
+					
+					
+					
+					
+					
+					
+					
+					
+					
+					
+					
+					
 						
 					
 					
@@ -3012,7 +3450,7 @@ order by load_pct desc]]></sql>
 					
 					
 					
-					null																																																																																																																																																																																																																																																																																																																																	</data>
+					null																																																																																																																																																																																																																																																																																																																																																																																																																																</data>
 				</header>
 				<footer enable="false" generatedate="false">
 					<data value="null" />
@@ -3035,7 +3473,7 @@ order by load_pct desc]]></sql>
 	,snaps as ( select snaps.dbid,snaps.instance_number,snaps.snap_id from dba_hist_snapshot snaps cross join parms where not (snaps.begin_interval_time > parms.end_date or snaps.end_interval_time < parms.start_date) and snaps.instance_number = nvl(parms.instance_number, snaps.instance_number))
     ,ash   as ( select ash.snap_id ,ash.dbid ,ash.instance_number ,sample_id ,sample_time ,session_id ,session_serial# ,session_type ,flags ,user_id ,sql_id ,is_sqlid_current ,sql_child_number ,sql_opcode ,sql_opname ,force_matching_signature ,top_level_sql_id ,top_level_sql_opcode ,sql_plan_hash_value ,sql_plan_line_id ,sql_plan_operation ,sql_plan_options ,sql_exec_id ,sql_exec_start ,plsql_entry_object_id ,plsql_entry_subprogram_id ,plsql_object_id ,plsql_subprogram_id ,qc_instance_id ,qc_session_id ,qc_session_serial# ,px_flags ,event ,event_id ,seq# ,p1text ,p1 ,p2text ,p2 ,p3text ,p3 ,wait_class ,wait_class_id ,wait_time ,session_state ,time_waited ,blocking_session_status ,blocking_session ,blocking_session_serial# ,blocking_inst_id ,blocking_hangchain_info ,current_obj# ,current_file# ,current_block# ,current_row# ,top_level_call# ,top_level_call_name ,consumer_group_id ,xid ,remote_instance# ,time_model ,in_connection_mgmt ,in_parse ,in_hard_parse ,in_sql_execution ,in_plsql_execution ,in_plsql_rpc ,in_plsql_compilation ,in_java_execution ,in_bind ,in_cursor_close ,in_sequence_load ,capture_overhead ,replay_overhead ,is_captured ,is_replayed ,service_hash ,program ,module ,action ,client_id ,machine ,port ,ecid ,dbreplay_file_id ,dbreplay_call_counter ,tm_delta_time ,tm_delta_cpu_time ,tm_delta_db_time ,delta_time ,delta_read_io_requests ,delta_write_io_requests ,delta_read_io_bytes ,delta_write_io_bytes ,delta_interconnect_io_bytes ,pga_allocated ,temp_space_allocated  from dba_hist_active_sess_history ash,(select start_date, end_date, inter, sample_source from parms) p, snaps where snaps.dbid = ash.dbid and snaps.instance_number = ash.instance_number and snaps.snap_id = ash.snap_id and sample_time - mod((cast(sample_time as date) - start_date)*24*60*60,inter)/24/60/60 = case when p.sample_source = 10 then :SLOT else null end union all
                 select 0           ,null     ,inst_id             ,sample_id ,sample_time ,session_id ,session_serial# ,session_type ,flags ,user_id ,sql_id ,is_sqlid_current ,sql_child_number ,sql_opcode ,sql_opname ,force_matching_signature ,top_level_sql_id ,top_level_sql_opcode ,sql_plan_hash_value ,sql_plan_line_id ,sql_plan_operation ,sql_plan_options ,sql_exec_id ,sql_exec_start ,plsql_entry_object_id ,plsql_entry_subprogram_id ,plsql_object_id ,plsql_subprogram_id ,qc_instance_id ,qc_session_id ,qc_session_serial# ,px_flags ,event ,event_id ,seq# ,p1text ,p1 ,p2text ,p2 ,p3text ,p3 ,wait_class ,wait_class_id ,wait_time ,session_state ,time_waited ,blocking_session_status ,blocking_session ,blocking_session_serial# ,blocking_inst_id ,blocking_hangchain_info ,current_obj# ,current_file# ,current_block# ,current_row# ,top_level_call# ,top_level_call_name ,consumer_group_id ,xid ,remote_instance# ,time_model ,in_connection_mgmt ,in_parse ,in_hard_parse ,in_sql_execution ,in_plsql_execution ,in_plsql_rpc ,in_plsql_compilation ,in_java_execution ,in_bind ,in_cursor_close ,in_sequence_load ,capture_overhead ,replay_overhead ,is_captured ,is_replayed ,service_hash ,program ,module ,action ,client_id ,machine ,port ,ecid ,dbreplay_file_id ,dbreplay_call_counter ,tm_delta_time ,tm_delta_cpu_time ,tm_delta_db_time ,delta_time ,delta_read_io_requests ,delta_write_io_requests ,delta_read_io_bytes ,delta_write_io_bytes ,delta_interconnect_io_bytes ,pga_allocated ,temp_space_allocated  from gv$active_session_history    ash,(select start_date, end_date, inter, sample_source from parms) p        where                                                                                                           sample_time - mod((cast(sample_time as date) - start_date)*24*60*60,inter)/24/60/60 = case when p.sample_source = 1  then :SLOT else null end)
-select distinct
+select /*+ NO_PARALLEL */ distinct
 	 ash.sql_id
     ,sql_plan_hash_value	
     ,sql_plan_line_id	
@@ -3123,6 +3561,25 @@ order by load_pct desc]]></sql>
 					
 					
 					
+					
+					
+					
+					
+					
+					
+					
+					
+					
+					
+					
+					
+					
+					
+					
+					
+					
+					
+					
 						
 					
 					
@@ -3143,7 +3600,7 @@ order by load_pct desc]]></sql>
 					
 					
 					
-					null																																																																																																																																																																																																																																																																																																																																	</data>
+					null																																																																																																																																																																																																																																																																																																																																																																																																																																</data>
 				</header>
 				<footer enable="false" generatedate="false">
 					<data value="null" />
@@ -3166,7 +3623,7 @@ order by load_pct desc]]></sql>
 	,snaps as ( select snaps.dbid,snaps.instance_number,snaps.snap_id from dba_hist_snapshot snaps cross join parms where not (snaps.begin_interval_time > parms.end_date or snaps.end_interval_time < parms.start_date) and snaps.instance_number = nvl(parms.instance_number, snaps.instance_number))
     ,ash   as ( select ash.snap_id ,ash.dbid ,ash.instance_number ,sample_id ,sample_time ,session_id ,session_serial# ,session_type ,flags ,user_id ,sql_id ,is_sqlid_current ,sql_child_number ,sql_opcode ,sql_opname ,force_matching_signature ,top_level_sql_id ,top_level_sql_opcode ,sql_plan_hash_value ,sql_plan_line_id ,sql_plan_operation ,sql_plan_options ,sql_exec_id ,sql_exec_start ,plsql_entry_object_id ,plsql_entry_subprogram_id ,plsql_object_id ,plsql_subprogram_id ,qc_instance_id ,qc_session_id ,qc_session_serial# ,px_flags ,event ,event_id ,seq# ,p1text ,p1 ,p2text ,p2 ,p3text ,p3 ,wait_class ,wait_class_id ,wait_time ,session_state ,time_waited ,blocking_session_status ,blocking_session ,blocking_session_serial# ,blocking_inst_id ,blocking_hangchain_info ,current_obj# ,current_file# ,current_block# ,current_row# ,top_level_call# ,top_level_call_name ,consumer_group_id ,xid ,remote_instance# ,time_model ,in_connection_mgmt ,in_parse ,in_hard_parse ,in_sql_execution ,in_plsql_execution ,in_plsql_rpc ,in_plsql_compilation ,in_java_execution ,in_bind ,in_cursor_close ,in_sequence_load ,capture_overhead ,replay_overhead ,is_captured ,is_replayed ,service_hash ,program ,module ,action ,client_id ,machine ,port ,ecid ,dbreplay_file_id ,dbreplay_call_counter ,tm_delta_time ,tm_delta_cpu_time ,tm_delta_db_time ,delta_time ,delta_read_io_requests ,delta_write_io_requests ,delta_read_io_bytes ,delta_write_io_bytes ,delta_interconnect_io_bytes ,pga_allocated ,temp_space_allocated  from dba_hist_active_sess_history ash,(select start_date, end_date, inter, sample_source from parms) p, snaps where snaps.dbid = ash.dbid and snaps.instance_number = ash.instance_number and snaps.snap_id = ash.snap_id and sample_time - mod((cast(sample_time as date) - start_date)*24*60*60,inter)/24/60/60 = case when p.sample_source = 10 then :SLOT else null end union all
                 select 0           ,null     ,inst_id             ,sample_id ,sample_time ,session_id ,session_serial# ,session_type ,flags ,user_id ,sql_id ,is_sqlid_current ,sql_child_number ,sql_opcode ,sql_opname ,force_matching_signature ,top_level_sql_id ,top_level_sql_opcode ,sql_plan_hash_value ,sql_plan_line_id ,sql_plan_operation ,sql_plan_options ,sql_exec_id ,sql_exec_start ,plsql_entry_object_id ,plsql_entry_subprogram_id ,plsql_object_id ,plsql_subprogram_id ,qc_instance_id ,qc_session_id ,qc_session_serial# ,px_flags ,event ,event_id ,seq# ,p1text ,p1 ,p2text ,p2 ,p3text ,p3 ,wait_class ,wait_class_id ,wait_time ,session_state ,time_waited ,blocking_session_status ,blocking_session ,blocking_session_serial# ,blocking_inst_id ,blocking_hangchain_info ,current_obj# ,current_file# ,current_block# ,current_row# ,top_level_call# ,top_level_call_name ,consumer_group_id ,xid ,remote_instance# ,time_model ,in_connection_mgmt ,in_parse ,in_hard_parse ,in_sql_execution ,in_plsql_execution ,in_plsql_rpc ,in_plsql_compilation ,in_java_execution ,in_bind ,in_cursor_close ,in_sequence_load ,capture_overhead ,replay_overhead ,is_captured ,is_replayed ,service_hash ,program ,module ,action ,client_id ,machine ,port ,ecid ,dbreplay_file_id ,dbreplay_call_counter ,tm_delta_time ,tm_delta_cpu_time ,tm_delta_db_time ,delta_time ,delta_read_io_requests ,delta_write_io_requests ,delta_read_io_bytes ,delta_write_io_bytes ,delta_interconnect_io_bytes ,pga_allocated ,temp_space_allocated  from gv$active_session_history    ash,(select start_date, end_date, inter, sample_source from parms) p        where                                                                                                           sample_time - mod((cast(sample_time as date) - start_date)*24*60*60,inter)/24/60/60 = case when p.sample_source = 1  then :SLOT else null end)
-select distinct
+select /*+ NO_PARALLEL */ distinct
 	 :DIM
     ,ash.sql_id
     ,sql_plan_hash_value	
@@ -3274,6 +3731,25 @@ order by load_pct desc]]></sql>
 					
 					
 					
+					
+					
+					
+					
+					
+					
+					
+					
+					
+					
+					
+					
+					
+					
+					
+					
+					
+					
+					
 						
 					
 					
@@ -3294,7 +3770,7 @@ order by load_pct desc]]></sql>
 					
 					
 					
-					null																																																																																																																																																																																																																																																																																																																																	</data>
+					null																																																																																																																																																																																																																																																																																																																																																																																																																																</data>
 				</header>
 				<footer enable="false" generatedate="false">
 					<data value="null" />
@@ -3317,7 +3793,7 @@ order by load_pct desc]]></sql>
 	,snaps as ( select snaps.dbid,snaps.instance_number,snaps.snap_id from dba_hist_snapshot snaps cross join parms where not (snaps.begin_interval_time > parms.end_date or snaps.end_interval_time < parms.start_date) and snaps.instance_number = nvl(parms.instance_number, snaps.instance_number))
     ,ash   as ( select ash.snap_id ,ash.dbid ,ash.instance_number ,sample_id ,sample_time ,session_id ,session_serial# ,session_type ,flags ,user_id ,sql_id ,is_sqlid_current ,sql_child_number ,sql_opcode ,sql_opname ,force_matching_signature ,top_level_sql_id ,top_level_sql_opcode ,sql_plan_hash_value ,sql_plan_line_id ,sql_plan_operation ,sql_plan_options ,sql_exec_id ,sql_exec_start ,plsql_entry_object_id ,plsql_entry_subprogram_id ,plsql_object_id ,plsql_subprogram_id ,qc_instance_id ,qc_session_id ,qc_session_serial# ,px_flags ,event ,event_id ,seq# ,p1text ,p1 ,p2text ,p2 ,p3text ,p3 ,wait_class ,wait_class_id ,wait_time ,session_state ,time_waited ,blocking_session_status ,blocking_session ,blocking_session_serial# ,blocking_inst_id ,blocking_hangchain_info ,current_obj# ,current_file# ,current_block# ,current_row# ,top_level_call# ,top_level_call_name ,consumer_group_id ,xid ,remote_instance# ,time_model ,in_connection_mgmt ,in_parse ,in_hard_parse ,in_sql_execution ,in_plsql_execution ,in_plsql_rpc ,in_plsql_compilation ,in_java_execution ,in_bind ,in_cursor_close ,in_sequence_load ,capture_overhead ,replay_overhead ,is_captured ,is_replayed ,service_hash ,program ,module ,action ,client_id ,machine ,port ,ecid ,dbreplay_file_id ,dbreplay_call_counter ,tm_delta_time ,tm_delta_cpu_time ,tm_delta_db_time ,delta_time ,delta_read_io_requests ,delta_write_io_requests ,delta_read_io_bytes ,delta_write_io_bytes ,delta_interconnect_io_bytes ,pga_allocated ,temp_space_allocated  from dba_hist_active_sess_history ash,(select start_date, end_date, inter, sample_source from parms) p, snaps where snaps.dbid = ash.dbid and snaps.instance_number = ash.instance_number and snaps.snap_id = ash.snap_id and sample_time - mod((cast(sample_time as date) - start_date)*24*60*60,inter)/24/60/60 = case when p.sample_source = 10 then :SLOT else null end union all
                 select 0           ,null     ,inst_id             ,sample_id ,sample_time ,session_id ,session_serial# ,session_type ,flags ,user_id ,sql_id ,is_sqlid_current ,sql_child_number ,sql_opcode ,sql_opname ,force_matching_signature ,top_level_sql_id ,top_level_sql_opcode ,sql_plan_hash_value ,sql_plan_line_id ,sql_plan_operation ,sql_plan_options ,sql_exec_id ,sql_exec_start ,plsql_entry_object_id ,plsql_entry_subprogram_id ,plsql_object_id ,plsql_subprogram_id ,qc_instance_id ,qc_session_id ,qc_session_serial# ,px_flags ,event ,event_id ,seq# ,p1text ,p1 ,p2text ,p2 ,p3text ,p3 ,wait_class ,wait_class_id ,wait_time ,session_state ,time_waited ,blocking_session_status ,blocking_session ,blocking_session_serial# ,blocking_inst_id ,blocking_hangchain_info ,current_obj# ,current_file# ,current_block# ,current_row# ,top_level_call# ,top_level_call_name ,consumer_group_id ,xid ,remote_instance# ,time_model ,in_connection_mgmt ,in_parse ,in_hard_parse ,in_sql_execution ,in_plsql_execution ,in_plsql_rpc ,in_plsql_compilation ,in_java_execution ,in_bind ,in_cursor_close ,in_sequence_load ,capture_overhead ,replay_overhead ,is_captured ,is_replayed ,service_hash ,program ,module ,action ,client_id ,machine ,port ,ecid ,dbreplay_file_id ,dbreplay_call_counter ,tm_delta_time ,tm_delta_cpu_time ,tm_delta_db_time ,delta_time ,delta_read_io_requests ,delta_write_io_requests ,delta_read_io_bytes ,delta_write_io_bytes ,delta_interconnect_io_bytes ,pga_allocated ,temp_space_allocated  from gv$active_session_history    ash,(select start_date, end_date, inter, sample_source from parms) p        where                                                                                                           sample_time - mod((cast(sample_time as date) - start_date)*24*60*60,inter)/24/60/60 = case when p.sample_source = 1  then :SLOT else null end)
-select distinct
+select /*+ NO_PARALLEL */ distinct
 	 :DIM
     ,ash.event
     ,ash.sql_id
@@ -3423,6 +3899,25 @@ order by load_pct desc]]></sql>
 					
 					
 					
+					
+					
+					
+					
+					
+					
+					
+					
+					
+					
+					
+					
+					
+					
+					
+					
+					
+					
+					
 						
 					
 					
@@ -3437,7 +3932,7 @@ order by load_pct desc]]></sql>
 					
 					
 					
-					null																																																																																																																																																																																																																																																																																																			</data>
+					null																																																																																																																																																																																																																																																																																																																																																																																																		</data>
 				</header>
 				<footer enable="false" generatedate="false">
 					<data value="null" />
